@@ -1,0 +1,7 @@
+{
+  "name": "Terneo MQTT",
+  "homeassistant": "2024.1.0",
+  "zip_release": true,
+  "filename": "terneo_mqtt.zip",
+  "content_in_root": false
+}
