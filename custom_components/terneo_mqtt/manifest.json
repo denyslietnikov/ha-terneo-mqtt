@@ -1,5 +1,5 @@
 {
-  "domain": "terneo_mqtt",
+  "domain": "terneo",
   "name": "Terneo MQTT",
   "codeowners": ["@denyslietnikov"],
   "config_flow": true,
@@ -8,8 +8,6 @@
   "integration_type": "device",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/denyslietnikov/ha-terneo-mqtt/issues",
-  "icon": "https://raw.githubusercontent.com/home-assistant/brands/master/custom_integrations/terneo/icon.png",
-  "logo": "https://raw.githubusercontent.com/home-assistant/brands/master/custom_integrations/terneo/logo.png",
   "requirements": [],
   "version": "0.1.0"
 }
