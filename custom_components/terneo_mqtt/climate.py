@@ -21,10 +21,16 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Terneo MQTT climate from a config entry."""
-    serial = config_entry.data.get("serial")
+    config = config_entry.data
+    client_ids = config["client_ids"].split(",")
     topic_prefix = config_entry.options.get("topic_prefix", config_entry.data.get("topic_prefix", "terneo"))
-    if serial:
-        async_add_entities([TerneoMQTTClimate(hass, serial, topic_prefix)])
+    entities = []
+    for client_id in client_ids:
+        client_id = client_id.strip()
+        if client_id:
+            entities.append(TerneoMQTTClimate(hass, client_id, topic_prefix))
+    if entities:
+        async_add_entities(entities)
 
 
 class TerneoMQTTClimate(ClimateEntity):
@@ -42,20 +48,20 @@ class TerneoMQTTClimate(ClimateEntity):
     _attr_max_temp = 35
     _attr_precision = 0.5
 
-    def __init__(self, hass: HomeAssistant, serial: str, topic_prefix: str, state_topic: str = None, command_topic: str = None) -> None:
+    def __init__(self, hass: HomeAssistant, client_id: str, topic_prefix: str, state_topic: str = None, command_topic: str = None) -> None:
         """Initialize the climate device."""
         self.hass = hass
-        self._serial = serial
+        self._client_id = client_id
         self._topic_prefix = topic_prefix
         # Status topics
-        self._air_temp_topic = f"{topic_prefix}/{serial}/airTemp"
-        self._set_temp_topic = f"{topic_prefix}/{serial}/setTemp"
-        self._load_topic = f"{topic_prefix}/{serial}/load"
+        self._air_temp_topic = f"{topic_prefix}/{client_id}/airTemp"
+        self._set_temp_topic = f"{topic_prefix}/{client_id}/setTemp"
+        self._load_topic = f"{topic_prefix}/{client_id}/load"
         # Command topics
-        self._set_temp_cmd_topic = f"{topic_prefix}/{serial}/setTemp"
-        self._power_off_cmd_topic = f"{topic_prefix}/{serial}/powerOff"
-        self._attr_unique_id = f"terneo_{serial}"
-        self._attr_name = f"Terneo {serial}"
+        self._set_temp_cmd_topic = f"{topic_prefix}/{client_id}/setTemp"
+        self._power_off_cmd_topic = f"{topic_prefix}/{client_id}/powerOff"
+        self._attr_unique_id = f"terneo_{client_id}"
+        self._attr_name = f"Terneo {client_id}"
         self._attr_current_temperature = None
         self._attr_target_temperature = None
 
@@ -129,8 +135,8 @@ class TerneoMQTTClimate(ClimateEntity):
     def device_info(self):
         """Return device information."""
         return {
-            "identifiers": {(DOMAIN, self._serial)},
-            "name": f"Terneo {self._serial}",
+            "identifiers": {(DOMAIN, self._client_id)},
+            "name": f"Terneo {self._client_id}",
             "manufacturer": "Terneo",
             "model": "AX",
         }
