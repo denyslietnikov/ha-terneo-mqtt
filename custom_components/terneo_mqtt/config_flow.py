@@ -14,15 +14,13 @@ class TerneoMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None) -> FlowResult:
         """Handle the initial step."""
         if user_input is not None:
-            await self.async_set_unique_id(user_input["serial"])
-            self._abort_if_unique_id_configured()
             return self.async_create_entry(title="Terneo MQTT", data=user_input)
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required("serial"): str,
-                vol.Optional("topic_prefix", default="terneo"): str,
+                vol.Required("client_ids", description="Comma-separated list of MQTT Client IDs (e.g., terneo_ax_1B0026,terneo_ax_058009)"): str,
+                vol.Optional("topic_prefix", default="terneo", description="MQTT topic prefix used by the devices"): str,
             }),
         )
 
