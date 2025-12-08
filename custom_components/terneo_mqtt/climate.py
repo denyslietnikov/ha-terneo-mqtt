@@ -96,6 +96,11 @@ class TerneoMQTTClimate(ClimateEntity):
         temperature = kwargs.get("temperature")
         if temperature is not None:
             _LOGGER.debug("Setting temperature to %s", temperature)
+            # If currently OFF, turn on to HEAT when setting temperature
+            if self._attr_hvac_mode == climate.HVACMode.OFF:
+                _LOGGER.debug("Switching to HEAT mode for temperature setting")
+                self._attr_hvac_mode = climate.HVACMode.HEAT
+                await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0")
             await mqtt.async_publish(self.hass, self._set_temp_cmd_topic, str(temperature))
             # Optimistically update the state
             self._attr_target_temperature = temperature
@@ -106,6 +111,10 @@ class TerneoMQTTClimate(ClimateEntity):
         _LOGGER.debug("Setting HVAC mode to %s", hvac_mode)
         if hvac_mode == climate.HVACMode.HEAT:
             payload = "0"
+            # Set default target temperature if not set
+            if self._attr_target_temperature is None:
+                self._attr_target_temperature = 20.0
+                await mqtt.async_publish(self.hass, self._set_temp_cmd_topic, "20.0")
         elif hvac_mode == climate.HVACMode.OFF:
             payload = "1"
         else:
