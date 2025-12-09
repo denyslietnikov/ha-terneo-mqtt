@@ -14,7 +14,14 @@ class TerneoMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None) -> FlowResult:
         """Handle the initial step."""
         if user_input is not None:
-            return self.async_create_entry(title="Terneo MQTT", data=user_input)
+            # Parse client_ids into devices list
+            client_ids = [cid.strip() for cid in user_input["client_ids"].split(",") if cid.strip()]
+            devices = [{"client_id": cid} for cid in client_ids]
+            data = {
+                "prefix": user_input.get("topic_prefix", "terneo"),
+                "devices": devices,
+            }
+            return self.async_create_entry(title="Terneo MQTT", data=data)
 
         return self.async_show_form(
             step_id="user",

@@ -22,14 +22,12 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Terneo MQTT sensor platform."""
-    config = config_entry.data
-    client_ids = config["client_ids"].split(",")
-    prefix = config.get("topic_prefix", "terneo")
+    devices = config_entry.data.get("devices", [])
+    prefix = config_entry.data.get("prefix", "terneo")
     entities = []
-    for client_id in client_ids:
-        client_id = client_id.strip()
-        if client_id:
-            entities.extend([
+    for device in devices:
+        client_id = device["client_id"]
+        entities.extend([
                 TerneoSensor(
                     client_id=client_id,
                     prefix=prefix,
@@ -100,11 +98,12 @@ class TerneoSensor(SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topic when entity is added."""
-        await mqtt.async_subscribe(self.hass, self._topic, self._handle_message, qos=0)
+        self._unsubscribe = await mqtt.async_subscribe(self.hass, self._topic, self._handle_message, qos=0)
 
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe from MQTT topic when entity is removed."""
-        await mqtt.async_unsubscribe(self.hass, self._topic)
+        if self._unsubscribe:
+            self._unsubscribe()
 
     @callback
     def _handle_message(self, msg: ReceiveMessage) -> None:

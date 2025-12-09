@@ -20,8 +20,11 @@ async def test_climate_entity_creation() -> None:
     assert entity._air_temp_topic == "terneo/terneo_ax_1B0026/airTemp"
     assert entity._set_temp_topic == "terneo/terneo_ax_1B0026/setTemp"
     assert entity._load_topic == "terneo/terneo_ax_1B0026/load"
+    assert entity._power_off_topic == "terneo/terneo_ax_1B0026/powerOff"
     assert entity.unique_id == "terneo_terneo_ax_1B0026"
     assert entity.name == "Terneo terneo_ax_1B0026"
+    assert entity._attr_hvac_mode == "off"
+    assert entity._attr_hvac_action == "idle"
 
 
 @pytest.mark.asyncio
@@ -78,7 +81,58 @@ async def test_climate_mqtt_message_handling() -> None:
     )
     entity._handle_message(msg)
 
+    assert entity._attr_hvac_action == "heating"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Test load message (idle)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/load",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/load",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    assert entity._attr_hvac_action == "idle"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Test powerOff message (on)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/powerOff",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/powerOff",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
     assert entity._attr_hvac_mode == "heat"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Test powerOff message (off)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/powerOff",
+        payload="1",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/powerOff",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    assert entity._attr_hvac_mode == "off"
     entity.async_write_ha_state.assert_called_once()
 
 
