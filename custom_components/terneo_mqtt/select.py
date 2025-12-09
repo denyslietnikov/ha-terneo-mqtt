@@ -78,7 +78,7 @@ class TerneoSelect(SelectEntity):
         """Set the option of the entity."""
         # Map option to payload: schedule -> 0, manual -> 1
         payload = "0" if option == "schedule" else "1"
-        await mqtt.async_publish(self.hass, self._command_topic, payload, qos=0)
+        await mqtt.async_publish(self.hass, self._command_topic, payload, qos=0, retain=True)
         self._attr_current_option = option
         self.async_write_ha_state()
 

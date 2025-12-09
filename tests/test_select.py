@@ -93,7 +93,7 @@ async def test_select_async_select_option(mock_mqtt) -> None:
 
     await entity.async_select_option("manual")
 
-    mock_mqtt.async_publish.assert_called_once_with(hass, entity._command_topic, "1", qos=0)
+    mock_mqtt.async_publish.assert_called_once_with(hass, entity._command_topic, "1", qos=0, retain=True)
     assert entity.current_option == "manual"
     entity.async_write_ha_state.assert_called_once()
 

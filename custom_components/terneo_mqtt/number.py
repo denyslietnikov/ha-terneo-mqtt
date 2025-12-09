@@ -80,7 +80,7 @@ class TerneoNumber(NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Set the value of the entity."""
         payload = str(int(value))
-        await mqtt.async_publish(self.hass, self._command_topic, payload, qos=0)
+        await mqtt.async_publish(self.hass, self._command_topic, payload, qos=0, retain=True)
         self._attr_native_value = value
         self.async_write_ha_state()
 
