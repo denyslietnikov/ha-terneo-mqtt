@@ -100,11 +100,12 @@ class TerneoSensor(SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topic when entity is added."""
-        await mqtt.async_subscribe(self.hass, self._topic, self._handle_message, qos=0)
+        self._unsubscribe = await mqtt.async_subscribe(self.hass, self._topic, self._handle_message, qos=0)
 
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe from MQTT topic when entity is removed."""
-        await mqtt.async_unsubscribe(self.hass, self._topic)
+        if self._unsubscribe:
+            self._unsubscribe()
 
     @callback
     def _handle_message(self, msg: ReceiveMessage) -> None:

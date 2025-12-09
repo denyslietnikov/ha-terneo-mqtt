@@ -31,7 +31,8 @@ async def test_binary_sensor_entity_creation() -> None:
 @patch('custom_components.terneo_mqtt.binary_sensor.mqtt')
 async def test_binary_sensor_async_added_to_hass(mock_mqtt) -> None:
     """Test MQTT subscription when entity is added."""
-    mock_mqtt.async_subscribe = AsyncMock()
+    unsubscribe_mock = MagicMock()
+    mock_mqtt.async_subscribe = AsyncMock(return_value=unsubscribe_mock)
     hass = MagicMock()
     entity = TerneoBinarySensor(
         client_id="terneo_ax_1B0026",
@@ -46,13 +47,15 @@ async def test_binary_sensor_async_added_to_hass(mock_mqtt) -> None:
     await entity.async_added_to_hass()
 
     mock_mqtt.async_subscribe.assert_called_once_with(hass, entity._topic, entity._handle_message, qos=0)
+    assert entity._unsubscribe == unsubscribe_mock
 
 
 @pytest.mark.asyncio
 @patch('custom_components.terneo_mqtt.binary_sensor.mqtt')
 async def test_binary_sensor_async_will_remove_from_hass(mock_mqtt) -> None:
     """Test MQTT unsubscription when entity is removed."""
-    mock_mqtt.async_unsubscribe = AsyncMock()
+    unsubscribe_mock = MagicMock()
+    mock_mqtt.async_subscribe = AsyncMock(return_value=unsubscribe_mock)
     hass = MagicMock()
     entity = TerneoBinarySensor(
         client_id="terneo_ax_1B0026",
@@ -64,9 +67,10 @@ async def test_binary_sensor_async_will_remove_from_hass(mock_mqtt) -> None:
     )
     entity.hass = hass
 
+    await entity.async_added_to_hass()
     await entity.async_will_remove_from_hass()
 
-    mock_mqtt.async_unsubscribe.assert_called_once_with(hass, entity._topic)
+    unsubscribe_mock.assert_called_once()
 
 
 @pytest.mark.asyncio
