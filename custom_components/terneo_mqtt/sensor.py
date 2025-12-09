@@ -22,14 +22,12 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Terneo MQTT sensor platform."""
-    config = config_entry.data
-    client_ids = config["client_ids"].split(",")
-    prefix = config.get("topic_prefix", "terneo")
+    devices = config_entry.data.get("devices", [])
+    prefix = config_entry.data.get("prefix", "terneo")
     entities = []
-    for client_id in client_ids:
-        client_id = client_id.strip()
-        if client_id:
-            entities.extend([
+    for device in devices:
+        client_id = device["client_id"]
+        entities.extend([
                 TerneoSensor(
                     client_id=client_id,
                     prefix=prefix,

@@ -21,14 +21,12 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Terneo MQTT climate from a config entry."""
-    config = config_entry.data
-    client_ids = config["client_ids"].split(",")
-    topic_prefix = config_entry.options.get("topic_prefix", config_entry.data.get("topic_prefix", "terneo"))
+    devices = config_entry.data.get("devices", [])
+    prefix = config_entry.data.get("prefix", "terneo")
     entities = []
-    for client_id in client_ids:
-        client_id = client_id.strip()
-        if client_id:
-            entities.append(TerneoMQTTClimate(hass, client_id, topic_prefix))
+    for device in devices:
+        client_id = device["client_id"]
+        entities.append(TerneoMQTTClimate(hass, client_id, prefix))
     if entities:
         async_add_entities(entities)
 

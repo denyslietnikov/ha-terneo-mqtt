@@ -30,8 +30,8 @@ async def test_config_flow_user() -> None:
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "Terneo MQTT"
     assert result["data"] == {
-        "client_ids": "terneo_ax_1B0026",
-        "topic_prefix": "terneo"
+        "prefix": "terneo",
+        "devices": [{"client_id": "terneo_ax_1B0026"}]
     }
 
 
@@ -50,4 +50,8 @@ async def test_config_flow_user_multiple_devices() -> None:
     })
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
-    assert result["data"]["client_ids"] == "terneo_ax_1B0026,terneo_ax_058009"
+    assert result["data"]["prefix"] == "terneo"
+    assert result["data"]["devices"] == [
+        {"client_id": "terneo_ax_1B0026"},
+        {"client_id": "terneo_ax_058009"}
+    ]
