@@ -92,6 +92,24 @@ async def test_climate_mqtt_message_handling() -> None:
 
     # Test load message (heating on)
     msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/powerOff",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/powerOff",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    assert entity._attr_hvac_mode == "heat"
+    assert entity._attr_hvac_action == "idle"  # Default when power on
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Test load message (heating on)
+    msg = ReceiveMessage(
         topic="terneo/terneo_ax_1B0026/load",
         payload="1",
         qos=0,
@@ -102,23 +120,6 @@ async def test_climate_mqtt_message_handling() -> None:
     entity._handle_message(msg)
 
     assert entity._attr_hvac_action == "heating"
-    entity.async_write_ha_state.assert_called_once()
-
-    # Reset mock
-    entity.async_write_ha_state.reset_mock()
-
-    # Test load message (idle)
-    msg = ReceiveMessage(
-        topic="terneo/terneo_ax_1B0026/load",
-        payload="0",
-        qos=0,
-        retain=False,
-        subscribed_topic="terneo/terneo_ax_1B0026/load",
-        timestamp=1234567890
-    )
-    entity._handle_message(msg)
-
-    assert entity._attr_hvac_action == "idle"
     entity.async_write_ha_state.assert_called_once()
 
     # Reset mock
