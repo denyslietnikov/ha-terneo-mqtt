@@ -42,7 +42,7 @@ class TerneoMQTTClimate(ClimateEntity):
     )
     _attr_hvac_modes = [climate.HVACMode.HEAT, climate.HVACMode.OFF]
     _attr_hvac_mode = climate.HVACMode.OFF
-    _attr_hvac_action = climate.HVACAction.IDLE
+    _attr_hvac_action = climate.HVACAction.OFF
     _attr_min_temp = 5
     _attr_max_temp = 35
     _attr_precision = 0.5
@@ -89,19 +89,34 @@ class TerneoMQTTClimate(ClimateEntity):
         """Handle status message from MQTT."""
         _LOGGER.debug("Received MQTT message: %s %s", msg.topic, msg.payload)
         try:
+            updated = False
             if msg.topic == self._air_temp_topic:
                 self._attr_current_temperature = float(msg.payload)
+                updated = True
             elif msg.topic == self._set_temp_topic:
                 self._attr_target_temperature = float(msg.payload)
+                updated = True
             elif msg.topic == self._load_topic:
-                self._attr_hvac_action = (
-                    climate.HVACAction.HEATING if msg.payload == "1" else climate.HVACAction.IDLE
-                )
+                # Update hvac_action based on load, but only if power is ON
+                if self._attr_hvac_mode == climate.HVACMode.HEAT:
+                    self._attr_hvac_action = (
+                        climate.HVACAction.HEATING if msg.payload == "1" else climate.HVACAction.IDLE
+                    )
+                updated = True
             elif msg.topic == self._power_off_topic:
                 self._attr_hvac_mode = (
                     climate.HVACMode.OFF if msg.payload == "1" else climate.HVACMode.HEAT
                 )
-            self.async_write_ha_state()
+                # Update hvac_action based on new hvac_mode
+                if self._attr_hvac_mode == climate.HVACMode.OFF:
+                    self._attr_hvac_action = climate.HVACAction.OFF
+                else:
+                    # If power is ON, set action based on current load (assume idle if unknown)
+                    self._attr_hvac_action = climate.HVACAction.IDLE
+                updated = True
+            
+            if updated:
+                self.async_write_ha_state()
         except ValueError:
             _LOGGER.error("Invalid payload in message: %s", msg.payload)
 
