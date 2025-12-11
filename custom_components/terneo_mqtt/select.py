@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import slugify
 
 from .const import DOMAIN
@@ -33,7 +34,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class TerneoSelect(SelectEntity):
+class TerneoSelect(SelectEntity, RestoreEntity):
     """Representation of a Terneo select entity."""
 
     def __init__(
@@ -67,7 +68,22 @@ class TerneoSelect(SelectEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topic when entity is added."""
+        await super().async_added_to_hass()
+        
+        # Restore previous state
+        if (last_state := await self.async_get_last_state()) is not None:
+            if last_state.state in self._options:
+                self._attr_current_option = last_state.state
+                _LOGGER.debug("Restored %s state: %s", self._sensor_type, self._attr_current_option)
+        
+        # Subscribe to MQTT topic
         self._unsubscribe = await mqtt.async_subscribe(self.hass, self._topic, self._handle_message, qos=0)
+        
+        # Publish current value to MQTT with retain if we have a value
+        if self._attr_current_option is not None:
+            payload = "0" if self._attr_current_option == "schedule" else "1"
+            await mqtt.async_publish(self.hass, self._topic, payload, qos=0, retain=True)
+            _LOGGER.debug("Published restored %s value to MQTT: %s", self._sensor_type, payload)
 
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe from MQTT topic when entity is removed."""
