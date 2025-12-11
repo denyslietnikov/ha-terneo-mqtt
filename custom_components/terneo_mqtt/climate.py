@@ -61,6 +61,7 @@ class TerneoMQTTClimate(ClimateEntity):
         # Command topics
         self._set_temp_cmd_topic = f"{topic_prefix}/{client_id}/setTemp"
         self._power_off_cmd_topic = f"{topic_prefix}/{client_id}/powerOff"
+        self._mode_cmd_topic = f"{topic_prefix}/{client_id}/mode"
         self._attr_unique_id = f"terneo_{client_id}"
         self._attr_name = f"Terneo {client_id}"
         self._attr_current_temperature = None
@@ -141,6 +142,9 @@ class TerneoMQTTClimate(ClimateEntity):
 
     def _update_hvac_mode_from_temps(self) -> None:
         """Update hvac_mode based on setTemp vs floorTemp."""
+        # Don't change mode if thermostat is OFF
+        if self._attr_hvac_mode == climate.HVACMode.OFF:
+            return
         if self._attr_target_temperature is not None and self._floor_temp is not None:
             if self._attr_target_temperature > self._floor_temp:
                 self._attr_hvac_mode = climate.HVACMode.HEAT
@@ -164,6 +168,8 @@ class TerneoMQTTClimate(ClimateEntity):
                 self._attr_hvac_mode = climate.HVACMode.HEAT
                 await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
             await mqtt.async_publish(self.hass, self._set_temp_cmd_topic, str(temperature), retain=True)
+            # Switch to manual mode when temperature is set manually
+            await mqtt.async_publish(self.hass, self._mode_cmd_topic, "1", retain=True)
             # Optimistically update the state
             self._attr_target_temperature = temperature
             self.async_write_ha_state()
@@ -173,17 +179,8 @@ class TerneoMQTTClimate(ClimateEntity):
         _LOGGER.debug("Setting HVAC mode to %s", hvac_mode)
         if hvac_mode == climate.HVACMode.HEAT:
             payload = "0"
-            # Set default target temperature if not set
-            if self._attr_target_temperature is None:
-                self._attr_target_temperature = 20.0
-                await mqtt.async_publish(self.hass, self._set_temp_cmd_topic, "20.0", retain=True)
         elif hvac_mode == climate.HVACMode.AUTO:
             payload = "0"  # Turn on
-            # Check if we should be in HEAT mode based on current temps
-            if (self._attr_target_temperature is not None and 
-                self._floor_temp is not None and 
-                self._attr_target_temperature > self._floor_temp):
-                hvac_mode = climate.HVACMode.HEAT
         elif hvac_mode == climate.HVACMode.OFF:
             payload = "1"
         else:
