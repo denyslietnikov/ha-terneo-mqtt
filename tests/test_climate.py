@@ -176,6 +176,62 @@ async def test_climate_mqtt_message_handling() -> None:
     assert entity._attr_hvac_action == "off"
     entity.async_write_ha_state.assert_called_once()
 
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Test that temperatures don't change mode when OFF
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/floorTemp",
+        payload="20.0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/floorTemp",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    # Should stay OFF
+    assert entity._attr_hvac_mode == "off"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/setTemp",
+        payload="25.0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/setTemp",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    # Should still stay OFF
+    assert entity._attr_hvac_mode == "off"
+    entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch('custom_components.terneo_mqtt.climate.mqtt')
+async def test_climate_async_set_hvac_mode_heat_from_off(mock_mqtt) -> None:
+    """Test setting HVAC mode to HEAT from OFF."""
+    mock_mqtt.async_publish = AsyncMock()
+    hass = MagicMock()
+    entity = TerneoMQTTClimate(hass, "terneo_ax_1B0026", "terneo")
+    entity.hass = hass
+    entity.async_write_ha_state = AsyncMock()
+    # Set to OFF first
+    entity._attr_hvac_mode = "off"
+
+    await entity.async_set_hvac_mode("heat")
+
+    # Should publish powerOff=0
+    assert mock_mqtt.async_publish.call_count == 1
+    mock_mqtt.async_publish.assert_any_call(hass, entity._power_off_cmd_topic, "0", retain=True)
+    assert entity.hvac_mode == "heat"
+    entity.async_write_ha_state.assert_called_once()
+
 
 @pytest.mark.asyncio
 @patch('custom_components.terneo_mqtt.climate.mqtt')
