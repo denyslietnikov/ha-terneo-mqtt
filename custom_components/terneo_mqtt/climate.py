@@ -61,6 +61,7 @@ class TerneoMQTTClimate(ClimateEntity):
         # Command topics
         self._set_temp_cmd_topic = f"{topic_prefix}/{client_id}/setTemp"
         self._power_off_cmd_topic = f"{topic_prefix}/{client_id}/powerOff"
+        self._mode_cmd_topic = f"{topic_prefix}/{client_id}/mode"
         self._attr_unique_id = f"terneo_{client_id}"
         self._attr_name = f"Terneo {client_id}"
         self._attr_current_temperature = None
@@ -167,6 +168,8 @@ class TerneoMQTTClimate(ClimateEntity):
                 self._attr_hvac_mode = climate.HVACMode.HEAT
                 await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
             await mqtt.async_publish(self.hass, self._set_temp_cmd_topic, str(temperature), retain=True)
+            # Switch to manual mode when temperature is set manually
+            await mqtt.async_publish(self.hass, self._mode_cmd_topic, "1", retain=True)
             # Optimistically update the state
             self._attr_target_temperature = temperature
             self.async_write_ha_state()

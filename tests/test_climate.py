@@ -235,21 +235,23 @@ async def test_climate_async_set_hvac_mode_heat_from_off(mock_mqtt) -> None:
 
 @pytest.mark.asyncio
 @patch('custom_components.terneo_mqtt.climate.mqtt')
-async def test_climate_async_set_hvac_mode_auto(mock_mqtt) -> None:
-    """Test setting HVAC mode to AUTO (idle)."""
+async def test_climate_async_set_temperature(mock_mqtt) -> None:
+    """Test setting temperature."""
     mock_mqtt.async_publish = AsyncMock()
     hass = MagicMock()
     entity = TerneoMQTTClimate(hass, "terneo_ax_1B0026", "terneo")
     entity.hass = hass
     entity.async_write_ha_state = AsyncMock()
-    # Set temps: setTemp=25.0, floorTemp=20.0 → should switch to HEAT
-    entity._attr_target_temperature = 25.0
-    entity._floor_temp = 20.0
+    # Set initial state
+    entity._attr_hvac_mode = "heat"
 
-    await entity.async_set_hvac_mode("auto")
+    await entity.async_set_temperature(temperature=25.0)
 
-    mock_mqtt.async_publish.assert_called_once_with(hass, entity._power_off_cmd_topic, "0", retain=True)
-    assert entity.hvac_mode == "heat"  # Because setTemp > floorTemp
+    # Should publish setTemp and mode=1
+    assert mock_mqtt.async_publish.call_count == 2
+    mock_mqtt.async_publish.assert_any_call(hass, entity._set_temp_cmd_topic, "25.0", retain=True)
+    mock_mqtt.async_publish.assert_any_call(hass, entity._mode_cmd_topic, "1", retain=True)
+    assert entity._attr_target_temperature == 25.0
     entity.async_write_ha_state.assert_called_once()
 
 
