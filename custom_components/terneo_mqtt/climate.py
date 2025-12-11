@@ -40,7 +40,7 @@ class TerneoMQTTClimate(ClimateEntity):
         | climate.ClimateEntityFeature.TURN_OFF
         | climate.ClimateEntityFeature.TURN_ON
     )
-    _attr_hvac_modes = [climate.HVACMode.HEAT, climate.HVACMode.OFF]
+    _attr_hvac_modes = [climate.HVACMode.HEAT, climate.HVACMode.OFF, climate.HVACMode.AUTO]
     _attr_hvac_mode = climate.HVACMode.OFF
     _attr_hvac_action = climate.HVACAction.OFF
     _attr_min_temp = 5
@@ -54,6 +54,7 @@ class TerneoMQTTClimate(ClimateEntity):
         self._topic_prefix = topic_prefix
         # Status topics
         self._air_temp_topic = f"{topic_prefix}/{client_id}/airTemp"
+        self._floor_temp_topic = f"{topic_prefix}/{client_id}/floorTemp"
         self._set_temp_topic = f"{topic_prefix}/{client_id}/setTemp"
         self._load_topic = f"{topic_prefix}/{client_id}/load"
         self._power_off_topic = f"{topic_prefix}/{client_id}/powerOff"
@@ -64,11 +65,15 @@ class TerneoMQTTClimate(ClimateEntity):
         self._attr_name = f"Terneo {client_id}"
         self._attr_current_temperature = None
         self._attr_target_temperature = None
+        self._floor_temp = None
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topics."""
         self._unsub_air_temp = await mqtt.async_subscribe(
             self.hass, self._air_temp_topic, self._handle_message, 0
+        )
+        self._unsub_floor_temp = await mqtt.async_subscribe(
+            self.hass, self._floor_temp_topic, self._handle_message, 0
         )
         self._unsub_set_temp = await mqtt.async_subscribe(
             self.hass, self._set_temp_topic, self._handle_message, 0
@@ -80,6 +85,7 @@ class TerneoMQTTClimate(ClimateEntity):
             self.hass, self._power_off_topic, self._handle_message, 0
         )
         self.async_on_remove(self._unsub_air_temp)
+        self.async_on_remove(self._unsub_floor_temp)
         self.async_on_remove(self._unsub_set_temp)
         self.async_on_remove(self._unsub_load)
         self.async_on_remove(self._unsub_power_off)
@@ -93,25 +99,38 @@ class TerneoMQTTClimate(ClimateEntity):
             if msg.topic == self._air_temp_topic:
                 self._attr_current_temperature = float(msg.payload)
                 updated = True
+            elif msg.topic == self._floor_temp_topic:
+                self._floor_temp = float(msg.payload)
+                # Update hvac_mode based on setTemp vs floorTemp
+                self._update_hvac_mode_from_temps()
+                updated = True
             elif msg.topic == self._set_temp_topic:
                 self._attr_target_temperature = float(msg.payload)
+                # Update hvac_mode based on setTemp vs floorTemp
+                self._update_hvac_mode_from_temps()
                 updated = True
             elif msg.topic == self._load_topic:
-                # Update hvac_action based on load, but only if power is ON
+                # Update hvac_action based on load, but only if power is ON (powerOff=0)
+                # HEATING: load=1 (implies powerOff=0) → orange ring
+                # IDLE: load=0 and powerOff=0 → green ring
                 if self._attr_hvac_mode == climate.HVACMode.HEAT:
                     self._attr_hvac_action = (
                         climate.HVACAction.HEATING if msg.payload == "1" else climate.HVACAction.IDLE
                     )
                 updated = True
             elif msg.topic == self._power_off_topic:
+                old_hvac_mode = self._attr_hvac_mode
                 self._attr_hvac_mode = (
-                    climate.HVACMode.OFF if msg.payload == "1" else climate.HVACMode.HEAT
+                    climate.HVACMode.OFF if msg.payload == "1" else 
+                    (climate.HVACMode.AUTO if old_hvac_mode == climate.HVACMode.AUTO else climate.HVACMode.HEAT)
                 )
                 # Update hvac_action based on new hvac_mode
                 if self._attr_hvac_mode == climate.HVACMode.OFF:
+                    # OFF: powerOff=1 → gray ring
                     self._attr_hvac_action = climate.HVACAction.OFF
                 else:
-                    # If power is ON, set action based on current load (assume idle if unknown)
+                    # Power ON: assume IDLE initially (will be updated by load message)
+                    # IDLE: powerOff=0 and load=0 → green ring
                     self._attr_hvac_action = climate.HVACAction.IDLE
                 updated = True
             
@@ -120,13 +139,27 @@ class TerneoMQTTClimate(ClimateEntity):
         except ValueError:
             _LOGGER.error("Invalid payload in message: %s", msg.payload)
 
+    def _update_hvac_mode_from_temps(self) -> None:
+        """Update hvac_mode based on setTemp vs floorTemp."""
+        if self._attr_target_temperature is not None and self._floor_temp is not None:
+            if self._attr_target_temperature > self._floor_temp:
+                self._attr_hvac_mode = climate.HVACMode.HEAT
+            else:
+                self._attr_hvac_mode = climate.HVACMode.AUTO
+            # Update hvac_action accordingly
+            if self._attr_hvac_mode == climate.HVACMode.OFF:
+                self._attr_hvac_action = climate.HVACAction.OFF
+            else:
+                # For AUTO/HEAT, action depends on load, but assume IDLE initially
+                self._attr_hvac_action = climate.HVACAction.IDLE
+
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
         temperature = kwargs.get("temperature")
         if temperature is not None:
             _LOGGER.debug("Setting temperature to %s", temperature)
-            # If currently OFF, turn on to HEAT when setting temperature
-            if self._attr_hvac_mode == climate.HVACMode.OFF:
+            # If currently OFF or AUTO, switch to HEAT when setting temperature
+            if self._attr_hvac_mode in (climate.HVACMode.OFF, climate.HVACMode.AUTO):
                 _LOGGER.debug("Switching to HEAT mode for temperature setting")
                 self._attr_hvac_mode = climate.HVACMode.HEAT
                 await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
@@ -144,6 +177,13 @@ class TerneoMQTTClimate(ClimateEntity):
             if self._attr_target_temperature is None:
                 self._attr_target_temperature = 20.0
                 await mqtt.async_publish(self.hass, self._set_temp_cmd_topic, "20.0", retain=True)
+        elif hvac_mode == climate.HVACMode.AUTO:
+            payload = "0"  # Turn on
+            # Check if we should be in HEAT mode based on current temps
+            if (self._attr_target_temperature is not None and 
+                self._floor_temp is not None and 
+                self._attr_target_temperature > self._floor_temp):
+                hvac_mode = climate.HVACMode.HEAT
         elif hvac_mode == climate.HVACMode.OFF:
             payload = "1"
         else:
