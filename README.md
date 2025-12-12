@@ -31,25 +31,15 @@ This integration provides the following entities for each configured Terneo devi
 
 ## Configuration
 
-During setup, provide:
-- Device configurations: Comma-separated list of `client_id:host:sn` (sn optional)
-- MQTT broker details (host, port, credentials)
-- Device prefix (default: "terneo")
-
-Example: `terneo_ax_1:192.168.1.10:12345,terneo_ax_2:192.168.1.11`
+During setup:
+1. Provide comma-separated list of MQTT Client IDs (e.g., `terneo_ax_1B0026,terneo_ax_058009`)
+2. For each device, optionally specify Host/IP and Serial Number for HTTP telemetry enrichment
+3. MQTT broker details (host, port, credentials)
+4. Device prefix (default: "terneo")
 
 ### Optional HTTP Telemetry Enrichment
 
 If host is provided for a device, additional sensors will be created automatically using HTTP API command `{"cmd":4}`.
-
-### Optional HTTP Telemetry Enrichment
-
-For additional sensors (power, energy, Wi-Fi RSSI, diagnostics), enable HTTP enrichment in options:
-- Host/IP of the Terneo device
-- Optional serial number (SN)
-- Poll interval (default: 60 seconds)
-
-This fetches extended telemetry via HTTP API command `{"cmd":4}`.
 
 ## MQTT Topics
 

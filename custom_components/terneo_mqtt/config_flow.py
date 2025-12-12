@@ -11,31 +11,62 @@ class TerneoMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    def __init__(self):
+        """Initialize the config flow."""
+        self._devices = []
+        self._device_configs = {}
+        self._current_device_index = 0
+
     async def async_step_user(self, user_input=None) -> FlowResult:
         """Handle the initial step."""
         if user_input is not None:
-            # Parse devices_config into devices list
-            devices_config = user_input["devices_config"]
-            devices = []
-            for dc in devices_config.split(","):
-                parts = dc.strip().split(":")
-                if len(parts) >= 1:
-                    client_id = parts[0].strip()
-                    host = parts[1].strip() if len(parts) > 1 else ""
-                    sn = parts[2].strip() if len(parts) > 2 else ""
-                    devices.append({"client_id": client_id, "host": host, "sn": sn})
-            data = {
-                "prefix": user_input.get("topic_prefix", "terneo"),
-                "devices": devices,
-            }
-            return self.async_create_entry(title="Terneo MQTT", data=data)
+            self.init_data = user_input
+            self._devices = [cid.strip() for cid in user_input["client_ids"].split(",") if cid.strip()]
+            if not self._devices:
+                return self.async_abort(reason="no_devices")
+            self._device_configs = {}
+            self._current_device_index = 0
+            return await self.async_step_device_config()
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required("devices_config", description="Comma-separated device configs: client_id:host:sn (sn optional, e.g., terneo_ax_1:192.168.1.10:12345,terneo_ax_2:192.168.1.11)"): str,
+                vol.Required("client_ids", description="Comma-separated list of MQTT Client IDs (e.g., terneo_ax_1B0026,terneo_ax_058009)"): str,
                 vol.Optional("topic_prefix", default="terneo", description="MQTT topic prefix used by the devices"): str,
             }),
+        )
+
+    async def async_step_device_config(self, user_input=None) -> FlowResult:
+        """Handle device-specific configuration."""
+        if self._current_device_index >= len(self._devices):
+            # All devices configured, create entry
+            devices = [
+                {"client_id": cid, **self._device_configs.get(cid, {"host": "", "sn": ""})}
+                for cid in self._devices
+            ]
+            data = {
+                "prefix": self.init_data.get("topic_prefix", "terneo"),
+                "devices": devices,
+            }
+            return self.async_create_entry(title="Terneo MQTT", data=data)
+
+        client_id = self._devices[self._current_device_index]
+
+        if user_input is not None:
+            self._device_configs[client_id] = {
+                "host": user_input.get("host", ""),
+                "sn": user_input.get("sn", ""),
+            }
+            self._current_device_index += 1
+            return await self.async_step_device_config()
+
+        return self.async_show_form(
+            step_id="device_config",
+            data_schema=vol.Schema({
+                vol.Optional("host", default="", description=f"Host/IP for {client_id} (optional)"): str,
+                vol.Optional("sn", default="", description=f"Serial number for {client_id} (optional)"): str,
+            }),
+            description_placeholders={"device": client_id},
         )
 
     @staticmethod
