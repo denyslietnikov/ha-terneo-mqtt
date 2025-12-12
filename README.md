@@ -1,1 +1,69 @@
 # ha-terneo-mqtt
+
+Home Assistant integration for Terneo thermostats using MQTT.
+
+## Features
+
+This integration provides the following entities for each configured Terneo device:
+
+- **Climate Entity**: Control temperature, heating mode, and power state.
+- **Sensor Entities**:
+  - Floor temperature
+  - Protection temperature
+  - Load (current consumption)
+  - Wi-Fi RSSI (HTTP enrichment)
+  - Power consumption (HTTP enrichment)
+  - Energy usage (HTTP enrichment)
+  - Voltage (HTTP enrichment)
+  - Current (HTTP enrichment)
+- **Binary Sensor Entity**:
+  - Heating state (on/off based on load)
+- **Number Entity**:
+  - Brightness (0-9 for display brightness)
+- **Select Entity**:
+  - Mode (schedule/manual)
+
+## Installation
+
+1. Copy the `custom_components/terneo_mqtt` folder to your Home Assistant `custom_components` directory.
+2. Restart Home Assistant.
+3. Add the integration via the UI: Settings > Devices & Services > Add Integration > TerneoMQ.
+
+## Configuration
+
+During setup:
+1. Provide comma-separated list of MQTT Client IDs (e.g., `terneo_ax_1B0026,terneo_ax_058009`)
+2. For each device, optionally specify Host/IP and Serial Number for HTTP telemetry enrichment
+3. MQTT broker details (host, port, credentials)
+4. Device prefix (default: "terneo")
+
+### Optional HTTP Telemetry Enrichment
+
+If host is provided for a device, additional sensors will be created automatically using HTTP API command `{"cmd":4}`.
+
+## MQTT Topics
+
+The integration subscribes to and publishes on the following topics:
+
+- `{prefix}/{client_id}/protTemp` - Protection temperature
+- `{prefix}/{client_id}/floorTemp` - Floor temperature
+- `{prefix}/{client_id}/setTemp` - Set temperature (commands)
+- `{prefix}/{client_id}/load` - Load state
+- `{prefix}/{client_id}/bright` - Display brightness
+- `{prefix}/{client_id}/mode` - Operation mode (0=schedule, 1=manual)
+
+## Running Tests
+
+To run the test suite:
+
+```bash
+# Activate virtual environment
+source venv/bin/activate
+
+# Run tests
+python -m pytest
+```
+
+## License
+
+MIT
