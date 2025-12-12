@@ -11,6 +11,11 @@ This integration provides the following entities for each configured Terneo devi
   - Floor temperature
   - Protection temperature
   - Load (current consumption)
+  - Wi-Fi RSSI (HTTP enrichment)
+  - Power consumption (HTTP enrichment)
+  - Energy usage (HTTP enrichment)
+  - Voltage (HTTP enrichment)
+  - Current (HTTP enrichment)
 - **Binary Sensor Entity**:
   - Heating state (on/off based on load)
 - **Number Entity**:
@@ -27,9 +32,15 @@ This integration provides the following entities for each configured Terneo devi
 ## Configuration
 
 During setup, provide:
+- Device configurations: Comma-separated list of `client_id:host:sn` (sn optional)
 - MQTT broker details (host, port, credentials)
 - Device prefix (default: "terneo")
-- List of devices with their client IDs
+
+Example: `terneo_ax_1:192.168.1.10:12345,terneo_ax_2:192.168.1.11`
+
+### Optional HTTP Telemetry Enrichment
+
+If host is provided for a device, additional sensors will be created automatically using HTTP API command `{"cmd":4}`.
 
 ## MQTT Topics
 

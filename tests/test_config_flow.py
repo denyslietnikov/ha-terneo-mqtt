@@ -23,7 +23,7 @@ async def test_config_flow_user() -> None:
 
     # Test with valid data
     result = await flow.async_step_user({
-        "client_ids": "terneo_ax_1B0026",
+        "devices_config": "terneo_ax_1B0026",
         "topic_prefix": "terneo"
     })
 
@@ -31,29 +31,45 @@ async def test_config_flow_user() -> None:
     assert result["title"] == "Terneo MQTT"
     assert result["data"] == {
         "prefix": "terneo",
-        "devices": [{"client_id": "terneo_ax_1B0026"}]
+        "devices": [{"client_id": "terneo_ax_1B0026", "host": "", "sn": ""}]
     }
 
 
 @pytest.mark.asyncio
 @pytest.mark.asyncio
 @pytest.mark.asyncio
-async def test_config_flow_user_multiple_devices() -> None:
-    """Test the user config flow with multiple devices."""
+async def test_config_flow_user_with_host_sn() -> None:
+    """Test the user config flow with host and sn."""
     hass = MagicMock()
     flow = TerneoMQTTConfigFlow()
     flow.hass = hass
 
     result = await flow.async_step_user({
-        "client_ids": "terneo_ax_1B0026,terneo_ax_058009",
+        "devices_config": "terneo_ax_1:192.168.1.10:12345,terneo_ax_2:192.168.1.11",
         "topic_prefix": "terneo"
     })
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"]["prefix"] == "terneo"
     assert result["data"]["devices"] == [
-        {"client_id": "terneo_ax_1B0026"},
-        {"client_id": "terneo_ax_058009"}
+        {"client_id": "terneo_ax_1", "host": "192.168.1.10", "sn": "12345"},
+        {"client_id": "terneo_ax_2", "host": "192.168.1.11", "sn": ""}
+    ]
+    """Test the user config flow with multiple devices."""
+    hass = MagicMock()
+    flow = TerneoMQTTConfigFlow()
+    flow.hass = hass
+
+    result = await flow.async_step_user({
+        "devices_config": "terneo_ax_1B0026,terneo_ax_058009",
+        "topic_prefix": "terneo"
+    })
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"]["prefix"] == "terneo"
+    assert result["data"]["devices"] == [
+        {"client_id": "terneo_ax_1B0026", "host": "", "sn": ""},
+        {"client_id": "terneo_ax_058009", "host": "", "sn": ""}
     ]
 
 
