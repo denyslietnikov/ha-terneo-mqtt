@@ -1,4 +1,4 @@
-"""Test Terneo MQTT select entities."""
+"""Test TerneoMQ select entities."""
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

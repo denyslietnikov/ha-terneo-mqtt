@@ -1,11 +1,11 @@
-"""Test Terneo MQTT sensor entities."""
+"""Test TerneoMQ sensor entities."""
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.components.mqtt import ReceiveMessage
 from homeassistant.core import HomeAssistant
 
-from custom_components.terneo_mqtt.sensor import TerneoSensor
+from custom_components.terneo_mqtt.sensor import TerneoSensor, async_setup_entry, TerneoHTTPSensor, TerneoHTTPDiagnosticSensor
 
 
 @pytest.mark.asyncio
@@ -139,3 +139,22 @@ async def test_sensor_mqtt_message_handling() -> None:
 
     assert load_entity.native_value == 1
     load_entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_sensor_async_setup_entry() -> None:
+    """Test sensor platform setup."""
+    hass = MagicMock()
+    config_entry = MagicMock()
+    config_entry.data = {"devices": [{"client_id": "test_device"}]}
+    config_entry.options = {"topic_prefix": "terneo"}
+    
+    async_add_entities = AsyncMock()
+    
+    await async_setup_entry(hass, config_entry, async_add_entities)
+    
+    # Verify entities were added
+    async_add_entities.assert_called_once()
+    entities = async_add_entities.call_args[0][0]
+    assert len(entities) == 3  # 3 basic sensor entities per device (floor_temp, prot_temp, load)
+    assert all(isinstance(e, TerneoSensor) for e in entities)

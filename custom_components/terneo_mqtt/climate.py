@@ -1,4 +1,4 @@
-"""Climate platform for Terneo MQTT integration."""
+"""Climate platform for TerneoMQ integration."""
 from __future__ import annotations
 
 import logging
@@ -20,7 +20,7 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Terneo MQTT climate from a config entry."""
+    """Set up TerneoMQ climate from a config entry."""
     devices = config_entry.data.get("devices", [])
     prefix = config_entry.options.get("topic_prefix", config_entry.data.get("prefix", "terneo"))
     entities = []
@@ -32,7 +32,7 @@ async def async_setup_entry(
 
 
 class TerneoMQTTClimate(ClimateEntity):
-    """Representation of a Terneo MQTT climate device."""
+    """Representation of a TerneoMQ climate device."""
 
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_supported_features = (

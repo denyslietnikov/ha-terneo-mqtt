@@ -1,1 +1,1 @@
-# Tests for Terneo MQTT integration
+# Tests for TerneoMQ integration
