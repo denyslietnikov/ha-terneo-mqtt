@@ -1,4 +1,4 @@
-"""Select platform for Terneo MQTT integration."""
+"""Select platform for TerneoMQ integration."""
 import logging
 from typing import Any
 
@@ -23,7 +23,7 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Terneo MQTT select entities."""
+    """Set up the TerneoMQ select entities."""
     devices = config_entry.data.get("devices", [])
     prefix = config_entry.options.get("topic_prefix", config_entry.data.get("prefix", "terneo"))
 

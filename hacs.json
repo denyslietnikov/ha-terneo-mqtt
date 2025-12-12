@@ -1,10 +1,10 @@
 {
-  "name": "Terneo MQTT",
+  "name": "TerneoMQ",
   "homeassistant": "2024.1.0",
   "zip_release": false,
   "manifest": {
     "domain": "terneo",
-    "name": "Terneo MQTT",
+    "name": "TerneoMQ",
     "codeowners": ["@denyslietnikov"],
     "config_flow": true,
     "dependencies": ["mqtt"],
