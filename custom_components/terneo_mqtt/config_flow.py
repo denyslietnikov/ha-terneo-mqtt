@@ -16,11 +16,12 @@ class TerneoMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._devices = []
         self._device_configs = {}
         self._current_device_index = 0
+        self._init_data = None
 
     async def async_step_user(self, user_input=None) -> FlowResult:
         """Handle the initial step."""
         if user_input is not None:
-            self.init_data = user_input
+            self._init_data = user_input
             self._devices = [cid.strip() for cid in user_input["client_ids"].split(",") if cid.strip()]
             if not self._devices:
                 return self.async_abort(reason="no_devices")
@@ -45,7 +46,7 @@ class TerneoMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 for cid in self._devices
             ]
             data = {
-                "prefix": self.init_data.get("topic_prefix", "terneo"),
+                "prefix": self._init_data.get("topic_prefix", "terneo"),
                 "devices": devices,
             }
             return self.async_create_entry(title="TerneoMQ", data=data)

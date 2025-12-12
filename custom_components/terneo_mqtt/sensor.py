@@ -251,11 +251,11 @@ class TerneoHTTPDiagnosticSensor(CoordinatorEntity, SensorEntity):
 
     def __init__(
         self,
-        coordinator: TerneoHTTPCoordinator,
         client_id: str,
         sensor_type: str,
         name: str,
         data_key: str | None,
+        coordinator: TerneoHTTPCoordinator = None,
         **kwargs
     ) -> None:
         """Initialize the sensor."""
