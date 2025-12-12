@@ -1,4 +1,4 @@
-"""Binary sensor platform for Terneo MQTT integration."""
+"""Binary sensor platform for TerneoMQ integration."""
 import logging
 from typing import Any
 
@@ -19,7 +19,7 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Terneo MQTT binary sensor platform."""
+    """Set up the TerneoMQ binary sensor platform."""
     devices = config_entry.data.get("devices", [])
     prefix = config_entry.options.get("topic_prefix", config_entry.data.get("prefix", "terneo"))
     entities = []

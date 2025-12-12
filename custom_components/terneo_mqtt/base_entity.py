@@ -1,4 +1,4 @@
-"""Base entity for Terneo MQTT integration."""
+"""Base entity for TerneoMQ integration."""
 import logging
 import time
 from abc import ABC, abstractmethod
@@ -17,7 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class TerneoMQTTEntity(RestoreEntity, ABC):
-    """Base class for Terneo MQTT entities."""
+    """Base class for TerneoMQ entities."""
 
     def __init__(
         self,

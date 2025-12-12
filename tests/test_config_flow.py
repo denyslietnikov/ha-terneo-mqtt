@@ -1,4 +1,4 @@
-"""Test Terneo MQTT config flow."""
+"""Test TerneoMQ config flow."""
 import pytest
 from unittest.mock import MagicMock
 from homeassistant import config_entries
@@ -21,40 +21,52 @@ async def test_config_flow_user() -> None:
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    # Test with valid data
+    # Test with valid data - should go to device_config
     result = await flow.async_step_user({
         "client_ids": "terneo_ax_1B0026",
         "topic_prefix": "terneo"
     })
 
-    assert result["type"] == FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Terneo MQTT"
-    assert result["data"] == {
-        "prefix": "terneo",
-        "devices": [{"client_id": "terneo_ax_1B0026"}]
-    }
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "device_config"
 
 
 @pytest.mark.asyncio
-@pytest.mark.asyncio
-@pytest.mark.asyncio
-async def test_config_flow_user_multiple_devices() -> None:
-    """Test the user config flow with multiple devices."""
+async def test_config_flow_full() -> None:
+    """Test the full config flow with multiple devices."""
     hass = MagicMock()
     flow = TerneoMQTTConfigFlow()
     flow.hass = hass
 
+    # Step 1: user
     result = await flow.async_step_user({
-        "client_ids": "terneo_ax_1B0026,terneo_ax_058009",
+        "client_ids": "terneo_ax_1,terneo_ax_2",
         "topic_prefix": "terneo"
     })
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "device_config"
 
+    # Step 2: device config for terneo_ax_1
+    result = await flow.async_step_device_config({
+        "host": "192.168.1.10",
+        "sn": "12345"
+    })
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "device_config"
+
+    # Step 3: device config for terneo_ax_2
+    result = await flow.async_step_device_config({
+        "host": "",
+        "sn": ""
+    })
     assert result["type"] == FlowResultType.CREATE_ENTRY
-    assert result["data"]["prefix"] == "terneo"
-    assert result["data"]["devices"] == [
-        {"client_id": "terneo_ax_1B0026"},
-        {"client_id": "terneo_ax_058009"}
-    ]
+    assert result["data"] == {
+        "prefix": "terneo",
+        "devices": [
+            {"client_id": "terneo_ax_1", "host": "192.168.1.10", "sn": "12345"},
+            {"client_id": "terneo_ax_2", "host": "", "sn": ""}
+        ]
+    }
 
 
 @pytest.mark.asyncio

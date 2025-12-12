@@ -1,6 +1,6 @@
 {
   "domain": "terneo",
-  "name": "Terneo MQTT",
+  "name": "TerneoMQ",
   "codeowners": ["@denyslietnikov"],
   "config_flow": true,
   "dependencies": ["mqtt"],
