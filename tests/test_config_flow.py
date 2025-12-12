@@ -23,7 +23,7 @@ async def test_config_flow_user() -> None:
 
     # Test with valid data - should go to device_config
     result = await flow.async_step_user({
-        "client_ids": "terneo_ax_1B0026",
+        "devices_config": "terneo_ax_1B0026",
         "topic_prefix": "terneo"
     })
 
