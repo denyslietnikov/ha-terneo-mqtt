@@ -42,6 +42,15 @@ Example: `terneo_ax_1:192.168.1.10:12345,terneo_ax_2:192.168.1.11`
 
 If host is provided for a device, additional sensors will be created automatically using HTTP API command `{"cmd":4}`.
 
+### Optional HTTP Telemetry Enrichment
+
+For additional sensors (power, energy, Wi-Fi RSSI, diagnostics), enable HTTP enrichment in options:
+- Host/IP of the Terneo device
+- Optional serial number (SN)
+- Poll interval (default: 60 seconds)
+
+This fetches extended telemetry via HTTP API command `{"cmd":4}`.
+
 ## MQTT Topics
 
 The integration subscribes to and publishes on the following topics:

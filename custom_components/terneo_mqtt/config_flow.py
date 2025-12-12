@@ -64,5 +64,21 @@ class TerneoMQTTOptionsFlow(config_entries.OptionsFlow):
                     "topic_prefix",
                     default=self._config_entry.options.get("topic_prefix", "terneo")
                 ): str,
+                vol.Optional(
+                    "http_enabled",
+                    default=self._config_entry.options.get("http_enabled", False)
+                ): bool,
+                vol.Optional(
+                    "host",
+                    default=self._config_entry.options.get("host", "")
+                ): str,
+                vol.Optional(
+                    "sn",
+                    default=self._config_entry.options.get("sn", "")
+                ): str,
+                vol.Optional(
+                    "poll_interval",
+                    default=self._config_entry.options.get("poll_interval", 60)
+                ): int,
             }),
         )
