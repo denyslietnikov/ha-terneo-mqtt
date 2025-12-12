@@ -11,6 +11,11 @@ This integration provides the following entities for each configured Terneo devi
   - Floor temperature
   - Protection temperature
   - Load (current consumption)
+  - Wi-Fi RSSI (HTTP enrichment)
+  - Power consumption (HTTP enrichment)
+  - Energy usage (HTTP enrichment)
+  - Voltage (HTTP enrichment)
+  - Current (HTTP enrichment)
 - **Binary Sensor Entity**:
   - Heating state (on/off based on load)
 - **Number Entity**:
@@ -22,14 +27,19 @@ This integration provides the following entities for each configured Terneo devi
 
 1. Copy the `custom_components/terneo_mqtt` folder to your Home Assistant `custom_components` directory.
 2. Restart Home Assistant.
-3. Add the integration via the UI: Settings > Devices & Services > Add Integration > Terneo MQTT.
+3. Add the integration via the UI: Settings > Devices & Services > Add Integration > TerneoMQ.
 
 ## Configuration
 
-During setup, provide:
-- MQTT broker details (host, port, credentials)
-- Device prefix (default: "terneo")
-- List of devices with their client IDs
+During setup:
+1. Provide comma-separated list of MQTT Client IDs (e.g., `terneo_ax_1B0026,terneo_ax_058009`)
+2. For each device, optionally specify Host/IP and Serial Number for HTTP telemetry enrichment
+3. MQTT broker details (host, port, credentials)
+4. Device prefix (default: "terneo")
+
+### Optional HTTP Telemetry Enrichment
+
+If host is provided for a device, additional sensors will be created automatically using HTTP API command `{"cmd":4}`.
 
 ## MQTT Topics
 

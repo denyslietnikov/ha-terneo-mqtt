@@ -1,2 +1,2 @@
-"""Constants for Terneo MQTT integration."""
+"""Constants for TerneoMQ integration."""
 DOMAIN = "terneo"
