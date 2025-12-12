@@ -75,10 +75,10 @@ async def test_select_async_will_remove_from_hass(mock_mqtt) -> None:
 
 
 @pytest.mark.asyncio
-@patch('custom_components.terneo_mqtt.select.mqtt')
-async def test_select_async_select_option(mock_mqtt) -> None:
+@patch('homeassistant.components.mqtt.async_publish')
+async def test_select_async_select_option(mock_async_publish) -> None:
     """Test selecting an option."""
-    mock_mqtt.async_publish = AsyncMock()
+    mock_async_publish.return_value = None
     hass = MagicMock()
     entity = TerneoSelect(
         client_id="terneo_ax_1B0026",
@@ -93,7 +93,7 @@ async def test_select_async_select_option(mock_mqtt) -> None:
 
     await entity.async_select_option("manual")
 
-    mock_mqtt.async_publish.assert_called_once_with(hass, entity._command_topic, "1", qos=0, retain=True)
+    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "1", qos=0, retain=True)
     assert entity.current_option == "manual"
     entity.async_write_ha_state.assert_called_once()
 
@@ -144,3 +144,33 @@ async def test_select_mqtt_message_handling() -> None:
 
     assert entity.current_option == "manual"
     entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch('homeassistant.components.mqtt.async_publish')
+async def test_select_restore_state(mock_async_publish) -> None:
+    """Test state restoration without publishing to MQTT."""
+    mock_async_publish.return_value = None
+    mock_subscribe = AsyncMock()
+    with patch('homeassistant.components.mqtt.async_subscribe', return_value=mock_subscribe):
+        hass = MagicMock()
+        entity = TerneoSelect(
+            client_id="terneo_ax_1B0026",
+            prefix="terneo",
+            sensor_type="mode",
+            name="Mode",
+            options=["schedule", "manual"],
+            topic_suffix="mode"
+        )
+        entity.hass = hass
+
+        # Mock last state
+        last_state = MagicMock()
+        last_state.state = "manual"
+        entity.async_get_last_state = AsyncMock(return_value=last_state)
+
+        await entity.async_added_to_hass()
+
+        # Should restore value but not publish
+        assert entity.current_option == "manual"
+        mock_async_publish.assert_not_called()

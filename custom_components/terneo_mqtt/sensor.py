@@ -11,9 +11,8 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import slugify
 
+from .base_entity import TerneoMQTTEntity
 from .const import DOMAIN
-
-_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -23,7 +22,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Terneo MQTT sensor platform."""
     devices = config_entry.data.get("devices", [])
-    prefix = config_entry.data.get("prefix", "terneo")
+    prefix = config_entry.options.get("topic_prefix", config_entry.data.get("prefix", "terneo"))
     entities = []
     for device in devices:
         client_id = device["client_id"]
@@ -63,7 +62,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class TerneoSensor(SensorEntity):
+class TerneoSensor(TerneoMQTTEntity, SensorEntity):
     """Representation of a Terneo sensor."""
 
     def __init__(
@@ -78,12 +77,9 @@ class TerneoSensor(SensorEntity):
         topic_suffix: str,
     ) -> None:
         """Initialize the sensor."""
-        self._client_id = client_id
-        self._prefix = prefix
-        self._sensor_type = sensor_type
-        self._topic = f"{prefix}/{client_id}/{topic_suffix}"
-        self._attr_name = f"Terneo {client_id} {name}"
+        super().__init__(None, client_id, prefix, sensor_type, name, topic_suffix)  # hass will be set later
         self._attr_unique_id = f"{client_id}_{sensor_type}"
+        self._attr_name = f"Terneo {client_id} {name}"
         self._attr_device_class = device_class
         self._attr_state_class = state_class
         self._attr_native_unit_of_measurement = unit_of_measurement
@@ -105,15 +101,15 @@ class TerneoSensor(SensorEntity):
         if self._unsubscribe:
             self._unsubscribe()
 
-    @callback
-    def _handle_message(self, msg: ReceiveMessage) -> None:
-        """Handle incoming MQTT message."""
-        _LOGGER.debug("Sensor %s received MQTT message: %s %s", self._sensor_type, msg.topic, msg.payload)
-        try:
-            if self._sensor_type in ["floor_temp", "prot_temp"]:
-                self._attr_native_value = float(msg.payload)
-            elif self._sensor_type == "load":
-                self._attr_native_value = int(msg.payload)
-            self.async_write_ha_state()
-        except ValueError:
-            _LOGGER.error("Invalid payload for sensor %s: %s", self._sensor_type, msg.payload)
+    def parse_value(self, payload: str) -> float | int:
+        """Parse MQTT payload for sensor."""
+        if self._sensor_type in ["floor_temp", "prot_temp"]:
+            return float(payload)
+        elif self._sensor_type == "load":
+            return int(payload)
+        else:
+            raise ValueError(f"Unknown sensor type {self._sensor_type}")
+
+    def update_value(self, value: float | int) -> None:
+        """Update sensor value."""
+        self._attr_native_value = value
