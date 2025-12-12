@@ -24,7 +24,7 @@ async def test_climate_entity_creation() -> None:
     assert entity._power_off_topic == "terneo/terneo_ax_1B0026/powerOff"
     assert entity.unique_id == "terneo_terneo_ax_1B0026"
     assert entity.name == "Terneo terneo_ax_1B0026"
-    assert entity.hvac_modes == ["heat", "off", "auto"]
+    assert entity.hvac_modes == ["heat", "off"]
     assert entity._attr_hvac_mode == "off"
     assert entity._attr_hvac_action == "off"
 
@@ -136,8 +136,8 @@ async def test_climate_mqtt_message_handling() -> None:
     )
     entity._handle_message(msg)
 
-    # Since setTemp is 20.0 (from earlier), and floorTemp=20.0, should switch to AUTO
-    assert entity._attr_hvac_mode == "auto"
+    # hvac_mode should remain HEAT since powerOff=0
+    assert entity._attr_hvac_mode == "heat"
     entity.async_write_ha_state.assert_called_once()
 
     # Reset mock

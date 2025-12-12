@@ -10,9 +10,8 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .base_entity import TerneoMQTTEntity
 from .const import DOMAIN
-
-_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -22,7 +21,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Terneo MQTT binary sensor platform."""
     devices = config_entry.data.get("devices", [])
-    prefix = config_entry.data.get("prefix", "terneo")
+    prefix = config_entry.options.get("topic_prefix", config_entry.data.get("prefix", "terneo"))
     entities = []
     for device in devices:
         client_id = device["client_id"]
@@ -40,7 +39,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class TerneoBinarySensor(BinarySensorEntity):
+class TerneoBinarySensor(TerneoMQTTEntity, BinarySensorEntity):
     """Representation of a Terneo binary sensor."""
 
     def __init__(
@@ -53,12 +52,9 @@ class TerneoBinarySensor(BinarySensorEntity):
         topic_suffix: str,
     ) -> None:
         """Initialize the binary sensor."""
-        self._client_id = client_id
-        self._prefix = prefix
-        self._sensor_type = sensor_type
-        self._topic = f"{prefix}/{client_id}/{topic_suffix}"
-        self._attr_name = f"Terneo {client_id} {name}"
+        super().__init__(None, client_id, prefix, sensor_type, name, topic_suffix)  # hass will be set later
         self._attr_unique_id = f"{client_id}_{sensor_type}"
+        self._attr_name = f"Terneo {client_id} {name}"
         self._attr_device_class = device_class
         self._attr_is_on = None
 
@@ -78,13 +74,10 @@ class TerneoBinarySensor(BinarySensorEntity):
         if self._unsubscribe:
             self._unsubscribe()
 
-    @callback
-    def _handle_message(self, msg: ReceiveMessage) -> None:
-        """Handle incoming MQTT message."""
-        _LOGGER.debug("Binary sensor %s received MQTT message: %s %s", self._sensor_type, msg.topic, msg.payload)
-        try:
-            load = int(msg.payload)
-            self._attr_is_on = load > 0
-            self.async_write_ha_state()
-        except ValueError:
-            _LOGGER.error("Invalid payload for binary sensor %s: %s", self._sensor_type, msg.payload)
+    def parse_value(self, payload: str) -> int:
+        """Parse MQTT payload for binary sensor."""
+        return int(payload)
+
+    def update_value(self, value: int) -> None:
+        """Update binary sensor value."""
+        self._attr_is_on = value > 0

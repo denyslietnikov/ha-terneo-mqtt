@@ -11,6 +11,11 @@ This integration provides the following entities for each configured Terneo devi
   - Floor temperature
   - Protection temperature
   - Load (current consumption)
+  - Wi-Fi RSSI (HTTP enrichment)
+  - Power consumption (HTTP enrichment)
+  - Energy usage (HTTP enrichment)
+  - Voltage (HTTP enrichment)
+  - Current (HTTP enrichment)
 - **Binary Sensor Entity**:
   - Heating state (on/off based on load)
 - **Number Entity**:
@@ -30,6 +35,15 @@ During setup, provide:
 - MQTT broker details (host, port, credentials)
 - Device prefix (default: "terneo")
 - List of devices with their client IDs
+
+### Optional HTTP Telemetry Enrichment
+
+For additional sensors (power, energy, Wi-Fi RSSI, diagnostics), enable HTTP enrichment in options:
+- Host/IP of the Terneo device
+- Optional serial number (SN)
+- Poll interval (default: 60 seconds)
+
+This fetches extended telemetry via HTTP API command `{"cmd":4}`.
 
 ## MQTT Topics
 

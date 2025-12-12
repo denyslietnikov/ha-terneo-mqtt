@@ -83,10 +83,10 @@ async def test_number_async_will_remove_from_hass(mock_mqtt) -> None:
 
 
 @pytest.mark.asyncio
-@patch('custom_components.terneo_mqtt.number.mqtt')
-async def test_number_set_native_value(mock_mqtt) -> None:
+@patch('homeassistant.components.mqtt.async_publish')
+async def test_number_set_native_value(mock_async_publish) -> None:
     """Test setting the native value."""
-    mock_mqtt.async_publish = AsyncMock()
+    mock_async_publish.return_value = None
     hass = MagicMock()
     entity = TerneoNumber(
         client_id="terneo_ax_1B0026",
@@ -103,7 +103,7 @@ async def test_number_set_native_value(mock_mqtt) -> None:
 
     await entity.async_set_native_value(5.0)
 
-    mock_mqtt.async_publish.assert_called_once_with(hass, entity._command_topic, "5", qos=0, retain=True)
+    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "5", qos=0, retain=True)
     assert entity.native_value == 5.0
     entity.async_write_ha_state.assert_called_once()
 
@@ -139,3 +139,35 @@ async def test_number_mqtt_message_handling() -> None:
 
     assert entity.native_value == 7
     entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch('homeassistant.components.mqtt.async_publish')
+async def test_number_restore_state(mock_async_publish) -> None:
+    """Test state restoration without publishing to MQTT."""
+    mock_async_publish.return_value = None
+    mock_subscribe = AsyncMock()
+    with patch('homeassistant.components.mqtt.async_subscribe', return_value=mock_subscribe):
+        hass = MagicMock()
+        entity = TerneoNumber(
+            client_id="terneo_ax_1B0026",
+            prefix="terneo",
+            sensor_type="brightness",
+            name="Brightness",
+            min_value=0,
+            max_value=9,
+            step=1,
+            topic_suffix="bright"
+        )
+        entity.hass = hass
+
+        # Mock last state
+        last_state = MagicMock()
+        last_state.state = "5"
+        entity.async_get_last_state = AsyncMock(return_value=last_state)
+
+        await entity.async_added_to_hass()
+
+        # Should restore value but not publish
+        assert entity.native_value == 5.0
+        mock_async_publish.assert_not_called()

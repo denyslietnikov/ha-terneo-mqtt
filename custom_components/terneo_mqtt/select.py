@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import slugify
 
+from .base_entity import TerneoMQTTEntity
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Terneo MQTT select entities."""
     devices = config_entry.data.get("devices", [])
-    prefix = config_entry.data.get("prefix", "terneo")
+    prefix = config_entry.options.get("topic_prefix", config_entry.data.get("prefix", "terneo"))
 
     entities = []
     for device in devices:
@@ -34,7 +35,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class TerneoSelect(SelectEntity, RestoreEntity):
+class TerneoSelect(TerneoMQTTEntity, SelectEntity):
     """Representation of a Terneo select entity."""
 
     def __init__(
@@ -47,15 +48,10 @@ class TerneoSelect(SelectEntity, RestoreEntity):
         topic_suffix: str,
     ) -> None:
         """Initialize the select entity."""
-        self._client_id = client_id
-        self._prefix = prefix
-        self._sensor_type = sensor_type
-        self._topic = f"{prefix}/{client_id}/{topic_suffix}"
-        self._command_topic = f"{prefix}/{client_id}/{topic_suffix}"
-        self._options = options
-
-        self._attr_name = f"Terneo {client_id} {name}"
+        super().__init__(None, client_id, prefix, sensor_type, name, topic_suffix)  # hass will be set later
         self._attr_unique_id = f"{client_id}_{sensor_type}"
+        self._attr_name = f"Terneo {client_id} {name}"
+        self._options = options
         self._attr_options = options
         self._attr_current_option = None
 
@@ -69,6 +65,7 @@ class TerneoSelect(SelectEntity, RestoreEntity):
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topic when entity is added."""
         await super().async_added_to_hass()
+        self.hass = self.hass  # Ensure hass is set
         
         # Restore previous state
         if (last_state := await self.async_get_last_state()) is not None:
@@ -78,12 +75,6 @@ class TerneoSelect(SelectEntity, RestoreEntity):
         
         # Subscribe to MQTT topic
         self._unsubscribe = await mqtt.async_subscribe(self.hass, self._topic, self._handle_message, qos=0)
-        
-        # Publish current value to MQTT with retain if we have a value
-        if self._attr_current_option is not None:
-            payload = "0" if self._attr_current_option == "schedule" else "1"
-            await mqtt.async_publish(self.hass, self._topic, payload, qos=0, retain=True)
-            _LOGGER.debug("Published restored %s value to MQTT: %s", self._sensor_type, payload)
 
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe from MQTT topic when entity is removed."""
@@ -94,21 +85,17 @@ class TerneoSelect(SelectEntity, RestoreEntity):
         """Set the option of the entity."""
         # Map option to payload: schedule -> 0, manual -> 1
         payload = "0" if option == "schedule" else "1"
-        await mqtt.async_publish(self.hass, self._command_topic, payload, qos=0, retain=True)
+        await self.publish_command(payload)
         self._attr_current_option = option
         self.async_write_ha_state()
 
-    @callback
-    def _handle_message(self, msg: ReceiveMessage) -> None:
-        """Handle incoming MQTT message."""
-        _LOGGER.debug("Select %s received MQTT message: %s %s", self._sensor_type, msg.topic, msg.payload)
-        try:
-            # Map payload to option: 0 -> schedule, 1 -> manual
-            option = "schedule" if msg.payload == "0" else "manual"
-            if option in self._options:
-                self._attr_current_option = option
-                self.async_write_ha_state()
-            else:
-                _LOGGER.warning("Unknown option for %s: %s", self._sensor_type, msg.payload)
-        except ValueError:
-            _LOGGER.warning("Invalid payload for %s: %s", self._sensor_type, msg.payload)
+    def parse_value(self, payload: str) -> str:
+        """Parse MQTT payload for select."""
+        return "schedule" if payload == "0" else "manual"
+
+    def update_value(self, value: str) -> None:
+        """Update select value."""
+        if value in self._options:
+            self._attr_current_option = value
+        else:
+            _LOGGER.warning("Unknown option for %s: %s", self._sensor_type, value)
