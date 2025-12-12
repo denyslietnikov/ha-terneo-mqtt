@@ -10,18 +10,26 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Terneo MQTT from a config entry."""
-    # Check if HTTP enrichment is enabled
-    http_enabled = entry.options.get("http_enabled", False)
-    if http_enabled:
-        host = entry.options.get("host")
-        sn = entry.options.get("sn") or None
-        poll_interval = entry.options.get("poll_interval", 60)
+    devices = entry.data.get("devices", [])
+    
+    # Collect unique hosts with their sn
+    host_configs = {}
+    for device in devices:
+        host = device.get("host")
+        sn = device.get("sn")
         if host:
-            coordinator = TerneoHTTPCoordinator(hass, host, sn, poll_interval)
-            await coordinator.async_config_entry_first_refresh()
-            hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {"coordinator": coordinator}
-        else:
-            _LOGGER.warning("HTTP enrichment enabled but no host specified")
+            if host not in host_configs:
+                host_configs[host] = sn  # Use the sn from the first device with this host
+    
+    # Create coordinators for each unique host
+    coordinators = {}
+    for host, sn in host_configs.items():
+        coordinator = TerneoHTTPCoordinator(hass, host, sn, 60)  # poll_interval from options? but per device?
+        await coordinator.async_config_entry_first_refresh()
+        coordinators[host] = coordinator
+    
+    if coordinators:
+        hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {"coordinators": coordinators}
 
     # Forward the setup to the platforms
     await hass.config_entries.async_forward_entry_setups(entry, ["climate", "sensor", "binary_sensor", "number", "select"])
@@ -29,10 +37,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    # Close HTTP coordinator if exists
+    # Close HTTP coordinators if exist
     if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
-        coordinator = hass.data[DOMAIN][entry.entry_id].get("coordinator")
-        if coordinator:
+        coordinators = hass.data[DOMAIN][entry.entry_id].get("coordinators", {})
+        for coordinator in coordinators.values():
             await coordinator.async_close()
 
     return await hass.config_entries.async_unload_platforms(entry, ["climate", "sensor", "binary_sensor", "number", "select"])

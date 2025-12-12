@@ -64,14 +64,16 @@ async def async_setup_entry(
     if entities:
         async_add_entities(entities)
 
-    # Add HTTP telemetry sensors if coordinator exists
-    coordinator_data = hass.data.get(DOMAIN, {}).get(config_entry.entry_id, {})
-    coordinator = coordinator_data.get("coordinator")
-    if coordinator:
-        http_entities = []
-        for device in devices:
-            client_id = device["client_id"]
-            # Add HTTP sensors for this device
+    # Add HTTP telemetry sensors if coordinators exist
+    coordinators = {}
+    if DOMAIN in hass.data and config_entry.entry_id in hass.data[DOMAIN]:
+        coordinators = hass.data[DOMAIN][config_entry.entry_id].get("coordinators", {})
+    http_entities = []
+    for device in devices:
+        client_id = device["client_id"]
+        host = device.get("host")
+        if host and host in coordinators:
+            coordinator = coordinators[host]
             http_entities.extend([
                 TerneoHTTPSensor(
                     coordinator=coordinator,
