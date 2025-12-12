@@ -214,9 +214,10 @@ class TerneoHTTPSensor(CoordinatorEntity, SensorEntity):
         state_class: SensorStateClass | None,
         unit_of_measurement: str | None,
         data_key: str,
+        **kwargs
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, **kwargs)
         self._client_id = client_id
         self._sensor_type = sensor_type
         self._data_key = data_key
@@ -255,9 +256,10 @@ class TerneoHTTPDiagnosticSensor(CoordinatorEntity, SensorEntity):
         sensor_type: str,
         name: str,
         data_key: str | None,
+        **kwargs
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, **kwargs)
         self._client_id = client_id
         self._sensor_type = sensor_type
         self._data_key = data_key

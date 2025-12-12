@@ -5,7 +5,7 @@ import pytest
 from homeassistant.components.mqtt import ReceiveMessage
 from homeassistant.core import HomeAssistant
 
-from custom_components.terneo_mqtt.sensor import TerneoSensor, async_setup_entry
+from custom_components.terneo_mqtt.sensor import TerneoSensor, async_setup_entry, TerneoHTTPSensor, TerneoHTTPDiagnosticSensor
 
 
 @pytest.mark.asyncio
