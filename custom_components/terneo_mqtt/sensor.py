@@ -137,11 +137,11 @@ async def async_setup_entry(
                     data_key="u.0",
                 ),
                 TerneoHTTPDiagnosticSensor(
-                    coordinator=coordinator,
                     client_id=client_id,
                     sensor_type="http_telemetry",
                     name="HTTP Telemetry",
                     data_key=None,  # Full data
+                    coordinator=coordinator,
                 ),
             ])
         if http_entities:
