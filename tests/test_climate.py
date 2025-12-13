@@ -623,3 +623,74 @@ async def test_climate_hvac_mode_based_on_temperature_comparison() -> None:
     assert entity._attr_hvac_mode == "auto"
     assert entity._attr_hvac_action == "idle"
     entity.async_write_ha_state.assert_called()
+
+
+@pytest.mark.asyncio
+@patch('custom_components.terneo_mqtt.climate.mqtt')
+async def test_climate_optimistic_mode_heat(mock_mqtt) -> None:
+    """Test optimistic mode when setting HEAT from OFF."""
+    mock_mqtt.async_publish = AsyncMock()
+    hass = MagicMock()
+    entity = TerneoMQTTClimate(hass, "terneo_ax_1B0026", "terneo")
+    entity.hass = hass
+    entity.async_write_ha_state = MagicMock()
+
+    # Set initial state to OFF
+    entity._power_off = 1
+    entity._load = 0
+    entity._update_hvac_mode_from_temps()
+    assert entity._attr_hvac_mode == "off"
+
+    # Set HEAT mode
+    await entity.async_set_hvac_mode("heat")
+
+    # Should be optimistically set to HEAT
+    assert entity._attr_hvac_mode == "heat"
+    assert entity._optimistic_mode == "heat"
+    assert entity._optimistic_task is not None
+
+    # Simulate powerOff=0 message (from the command)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/powerOff",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/powerOff",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    # Should still be HEAT due to optimistic mode
+    assert entity._attr_hvac_mode == "heat"
+    assert entity._optimistic_mode == "heat"  # Not reset yet
+
+    # Simulate load=0 message (device hasn't started heating yet)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/load",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/load",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    # Should still be HEAT due to optimistic mode (load=0 doesn't reset it)
+    assert entity._attr_hvac_mode == "heat"
+    assert entity._optimistic_mode == "heat"
+
+    # Simulate load=1 message (device started heating)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/load",
+        payload="1",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/load",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    # Should still be HEAT, and optimistic mode reset since load=1 confirms heating
+    assert entity._attr_hvac_mode == "heat"
+    assert entity._optimistic_mode is None
+    assert entity._optimistic_task is None
