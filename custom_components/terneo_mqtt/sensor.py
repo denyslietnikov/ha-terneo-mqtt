@@ -1,5 +1,7 @@
 """Sensor platform for TerneoMQ integration."""
 
+import time
+
 from homeassistant.components import mqtt
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -25,6 +27,7 @@ async def async_setup_entry(
     prefix = config_entry.options.get(
         "topic_prefix", config_entry.data.get("prefix", "terneo")
     )
+    rated_power_w = config_entry.options.get("rated_power_w", 0)
     entities = []
     for device in devices:
         client_id = device["client_id"]
@@ -66,6 +69,22 @@ async def async_setup_entry(
                 ),
             ]
         )
+        # Add energy sensors if rated power is configured
+        if rated_power_w > 0:
+            entities.extend(
+                [
+                    TerneoPowerSensor(
+                        client_id=client_id,
+                        prefix=prefix,
+                        rated_power_w=rated_power_w,
+                    ),
+                    TerneoEnergySensor(
+                        client_id=client_id,
+                        prefix=prefix,
+                        rated_power_w=rated_power_w,
+                    ),
+                ]
+            )
     if entities:
         async_add_entities(entities)
 
@@ -208,3 +227,105 @@ class TerneoStateSensor(SensorEntity):
                 self._attr_native_value = "Heat"
             else:
                 self._attr_native_value = "Idle"
+
+
+class TerneoPowerSensor(SensorEntity):
+    """Representation of a Terneo power sensor."""
+
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "W"
+
+    def __init__(self, client_id: str, prefix: str, rated_power_w: int) -> None:
+        """Initialize the power sensor."""
+        self._client_id = client_id
+        self._topic_prefix = prefix
+        self._rated_power_w = rated_power_w
+        self._load_topic = f"{prefix}/{client_id}/load"
+        self._load = None
+
+        self._attr_unique_id = f"{client_id}_power"
+        self._attr_name = f"Terneo {client_id} Power"
+        self._attr_native_value = None
+        self.entity_id = f"sensor.terneo_{client_id}_power"
+
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, client_id)},
+            manufacturer="Terneo",
+            model="AX",
+            name=f"Terneo {client_id}",
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to MQTT topics when entity is added."""
+        self._unsub_load = await mqtt.async_subscribe(
+            self.hass, self._load_topic, self._handle_load_message, 0
+        )
+        self.async_on_remove(self._unsub_load)
+
+    @callback
+    def _handle_load_message(self, msg) -> None:
+        """Handle load message from MQTT."""
+        try:
+            self._load = int(msg.payload)
+            self._attr_native_value = self._load * self._rated_power_w
+            self.async_write_ha_state()
+        except ValueError:
+            pass
+
+
+class TerneoEnergySensor(SensorEntity):
+    """Representation of a Terneo energy sensor."""
+
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = "kWh"
+
+    def __init__(self, client_id: str, prefix: str, rated_power_w: int) -> None:
+        """Initialize the energy sensor."""
+        self._client_id = client_id
+        self._topic_prefix = prefix
+        self._rated_power_w = rated_power_w
+        self._load_topic = f"{prefix}/{client_id}/load"
+        self._load = None
+        self._last_update = time.time()
+        self._energy_kwh = 0.0
+
+        self._attr_unique_id = f"{client_id}_energy"
+        self._attr_name = f"Terneo {client_id} Energy"
+        self._attr_native_value = 0.0
+        self.entity_id = f"sensor.terneo_{client_id}_energy"
+
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, client_id)},
+            manufacturer="Terneo",
+            model="AX",
+            name=f"Terneo {client_id}",
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to MQTT topics when entity is added."""
+        self._unsub_load = await mqtt.async_subscribe(
+            self.hass, self._load_topic, self._handle_load_message, 0
+        )
+        self.async_on_remove(self._unsub_load)
+
+    @callback
+    def _handle_load_message(self, msg) -> None:
+        """Handle load message from MQTT."""
+        try:
+            new_load = int(msg.payload)
+            current_time = time.time()
+
+            # Calculate energy consumed since last update
+            if self._load is not None:
+                time_diff_hours = (current_time - self._last_update) / 3600.0
+                power_kw = (self._load * self._rated_power_w) / 1000.0
+                self._energy_kwh += power_kw * time_diff_hours
+
+            self._load = new_load
+            self._last_update = current_time
+            self._attr_native_value = round(self._energy_kwh, 6)
+            self.async_write_ha_state()
+        except ValueError:
+            pass

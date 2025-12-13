@@ -82,6 +82,11 @@ class TerneoMQTTOptionsFlow(config_entries.OptionsFlow):
                         ),
                         description="Whether devices support air temperature sensor",
                     ): bool,
+                    vol.Optional(
+                        "rated_power_w",
+                        default=self._config_entry.options.get("rated_power_w", 0),
+                        description="Rated power of heating element in watts (0 = disabled)",
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=10000)),
                 }
             ),
         )

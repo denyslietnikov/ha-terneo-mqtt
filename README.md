@@ -12,6 +12,8 @@ This integration provides the following entities for each configured Terneo devi
   - Protection temperature
   - Load (current consumption indicator)
   - Mode (Off/Idle/Heat based on device state)
+  - Power (current power consumption in watts, requires rated power setting)
+  - Energy (accumulated energy consumption in kWh, requires rated power setting)
 - **Binary Sensor Entity**:
   - None
 - **Number Entity**:
@@ -36,6 +38,7 @@ During setup:
 After setup, you can configure additional options:
 - **Topic prefix**: MQTT topic prefix used by devices
 - **Supports air temperature**: Whether devices publish air temperature sensor data. If disabled, floor temperature will be used as current temperature.
+- **Rated power (W)**: Rated power of the heating element in watts. When set above 0, enables power and energy sensors for HA Energy dashboard integration. Set to 0 to disable energy monitoring.
 ## MQTT Topics
 
 The integration subscribes to and publishes on the following topics:
