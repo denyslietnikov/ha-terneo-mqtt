@@ -69,7 +69,7 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
         await super().async_will_remove_from_hass()
 
     @callback
-    def _check_availability(self) -> None:
+    def _check_availability(self, now=None) -> None:
         """Check if entity should be marked unavailable."""
         if self._last_update is None or time.time() - self._last_update > 300:
             self._attr_available = False
