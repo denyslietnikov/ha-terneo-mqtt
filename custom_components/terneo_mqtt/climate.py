@@ -103,6 +103,15 @@ class TerneoMQTTClimate(ClimateEntity):
         self.async_on_remove(self._unsub_power_off)
         self.async_on_remove(self._unsub_mode)
 
+        # Restore state if available
+        last_state = await self.async_get_last_state()
+        if last_state:
+            self._attr_hvac_mode = last_state.state
+            if last_state.attributes:
+                self._attr_current_temperature = last_state.attributes.get("current_temperature")
+                self._attr_target_temperature = last_state.attributes.get("temperature")
+            self.async_write_ha_state()
+
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe from MQTT topics."""
         await super().async_will_remove_from_hass()
@@ -178,8 +187,9 @@ class TerneoMQTTClimate(ClimateEntity):
             # If currently OFF, switch to HEAT when setting temperature
             if self._attr_hvac_mode == climate.HVACMode.OFF:
                 _LOGGER.debug("Switching to HEAT mode for temperature setting")
-                self._attr_hvac_mode = climate.HVACMode.HEAT
+                await mqtt.async_publish(self.hass, self._mode_cmd_topic, "3", retain=True)
                 await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
+                self._attr_hvac_mode = climate.HVACMode.HEAT
             await mqtt.async_publish(self.hass, self._set_temp_cmd_topic, str(temperature), retain=True)
             # Optimistically update the state
             self._attr_target_temperature = temperature
@@ -189,17 +199,12 @@ class TerneoMQTTClimate(ClimateEntity):
         """Set new HVAC mode."""
         _LOGGER.debug("Setting HVAC mode to %s", hvac_mode)
         if hvac_mode == climate.HVACMode.HEAT:
-            # Set to manual mode (3)
+            # Set to manual mode (3) and turn on
             await mqtt.async_publish(self.hass, self._mode_cmd_topic, "3", retain=True)
-            # If currently OFF, stay OFF but set mode for when it turns on
-            if self._attr_hvac_mode != climate.HVACMode.OFF:
-                await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
+            await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
         elif hvac_mode == climate.HVACMode.AUTO:
-            # Set to auto mode (0)
-            await mqtt.async_publish(self.hass, self._mode_cmd_topic, "0", retain=True)
-            # If currently OFF, stay OFF but set mode for when it turns on
-            if self._attr_hvac_mode != climate.HVACMode.OFF:
-                await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
+            # Turn on (leave current mode as is)
+            await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
         elif hvac_mode == climate.HVACMode.OFF:
             await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "1", retain=True)
         else:
