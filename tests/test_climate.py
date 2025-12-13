@@ -569,6 +569,89 @@ async def test_climate_auto_mode_switches_to_heat_when_load_starts() -> None:
 
 
 @pytest.mark.asyncio
+async def test_climate_auto_mode_switches_to_heat_when_load_starts() -> None:
+    """Test that AUTO mode switches to HEAT when device starts heating (load=1)."""
+    hass = MagicMock()
+    entity = TerneoMQTTClimate(hass, "terneo_ax_1B0026", "terneo")
+
+    # Mock write_ha_state
+    entity.async_write_ha_state = MagicMock()
+
+    # Set initial state: AUTO mode (powerOff=0, mode=0, load=0)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/powerOff",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/powerOff",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/mode",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/mode",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/load",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/load",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    assert entity._attr_hvac_mode == "auto"
+    assert entity._attr_hvac_action == "idle"
+    entity.async_write_ha_state.assert_called()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Device starts heating: load=1
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/load",
+        payload="1",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/load",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    # Should switch to HEAT mode when actively heating
+    assert entity._attr_hvac_mode == "heat"
+    assert entity._attr_hvac_action == "heating"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Device stops heating: load=0
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/load",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/load",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    # Should switch back to AUTO mode when not heating
+    assert entity._attr_hvac_mode == "auto"
+    assert entity._attr_hvac_action == "idle"
+    entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_climate_device_info() -> None:
     """Test device info."""
     hass = MagicMock()
