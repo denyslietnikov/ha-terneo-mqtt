@@ -1,6 +1,7 @@
 """Climate platform for TerneoMQ integration."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -73,6 +74,15 @@ class TerneoMQTTClimate(ClimateEntity):
         self._power_off = None
         self._load = None
         self._mode = None  # 0 = auto, 1 = manual
+        self._optimistic_mode = None
+        self._optimistic_task = None
+
+    def _reset_optimistic_mode(self) -> None:
+        """Reset optimistic mode after timeout."""
+        self._optimistic_mode = None
+        self._optimistic_task = None
+        self._update_hvac_mode_from_temps()
+        self.async_write_ha_state()
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topics."""
@@ -106,6 +116,9 @@ class TerneoMQTTClimate(ClimateEntity):
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe from MQTT topics."""
         await super().async_will_remove_from_hass()
+        if self._optimistic_task:
+            self._optimistic_task.cancel()
+            self._optimistic_task = None
 
     @callback
     def _handle_message(self, msg) -> None:
@@ -127,7 +140,14 @@ class TerneoMQTTClimate(ClimateEntity):
                 self._update_hvac_mode_from_temps()
                 updated = True
             elif msg.topic == self._load_topic:
+                old_load = self._load
                 self._load = int(msg.payload)
+                # Reset optimistic mode only if load changes to 1 (device actually started heating)
+                if self._load == 1 and old_load != 1:
+                    if self._optimistic_task:
+                        self._optimistic_task.cancel()
+                        self._optimistic_task = None
+                    self._optimistic_mode = None
                 self._update_hvac_mode_from_temps()
                 updated = True
             elif msg.topic == self._power_off_topic:
@@ -146,6 +166,17 @@ class TerneoMQTTClimate(ClimateEntity):
 
     def _update_hvac_mode_from_temps(self) -> None:
         """Update hvac_mode and hvac_action based on powerOff and load."""
+        # If optimistic mode is set, use it instead of calculating
+        if self._optimistic_mode is not None:
+            self._attr_hvac_mode = self._optimistic_mode
+            if self._optimistic_mode == climate.HVACMode.HEAT:
+                self._attr_hvac_action = climate.HVACAction.HEATING
+            elif self._optimistic_mode == climate.HVACMode.OFF:
+                self._attr_hvac_action = climate.HVACAction.OFF
+            elif self._optimistic_mode == climate.HVACMode.AUTO:
+                self._attr_hvac_action = climate.HVACAction.IDLE
+            return
+        
         # hvac_mode is based only on powerOff and load
         if self._power_off == 1:
             self._attr_hvac_mode = climate.HVACMode.OFF
@@ -193,16 +224,36 @@ class TerneoMQTTClimate(ClimateEntity):
             # Set to manual mode (3) and turn on
             await mqtt.async_publish(self.hass, self._mode_cmd_topic, "3", retain=True)
             await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
+            # Set optimistic mode for 60 seconds
+            self._optimistic_mode = climate.HVACMode.HEAT
+            if self._optimistic_task:
+                self._optimistic_task.cancel()
+            self._optimistic_task = self.hass.loop.create_task(self._delay_reset_optimistic_mode(60))
         elif hvac_mode == climate.HVACMode.AUTO:
             # Turn on (leave current mode as is)
             await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
+            # Reset optimistic mode
+            if self._optimistic_task:
+                self._optimistic_task.cancel()
+                self._optimistic_task = None
+            self._optimistic_mode = None
         elif hvac_mode == climate.HVACMode.OFF:
             await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "1", retain=True)
+            # Reset optimistic mode
+            if self._optimistic_task:
+                self._optimistic_task.cancel()
+                self._optimistic_task = None
+            self._optimistic_mode = None
         else:
             return
         # Optimistically update the state
         self._attr_hvac_mode = hvac_mode
         self.async_write_ha_state()
+
+    async def _delay_reset_optimistic_mode(self, delay: int) -> None:
+        """Delay resetting optimistic mode."""
+        await asyncio.sleep(delay)
+        self._reset_optimistic_mode()
 
     @property
     def device_info(self):
