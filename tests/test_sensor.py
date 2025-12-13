@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant.components.mqtt import ReceiveMessage
 
-from custom_components.terneo_mqtt.sensor import (
+from custom_components.terneo.sensor import (
     TerneoEnergySensor,
     TerneoPowerSensor,
     TerneoSensor,
@@ -35,7 +35,7 @@ async def test_sensor_entity_creation() -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.sensor.mqtt")
+@patch("custom_components.terneo.sensor.mqtt")
 async def test_sensor_async_added_to_hass(mock_mqtt) -> None:
     """Test MQTT subscription when entity is added."""
     unsubscribe_mock = MagicMock()
@@ -62,7 +62,7 @@ async def test_sensor_async_added_to_hass(mock_mqtt) -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.sensor.mqtt")
+@patch("custom_components.terneo.sensor.mqtt")
 async def test_sensor_async_will_remove_from_hass(mock_mqtt) -> None:
     """Test MQTT unsubscription when entity is removed."""
     unsubscribe_mock = MagicMock()
@@ -183,7 +183,7 @@ async def test_state_sensor_entity_creation() -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.sensor.mqtt")
+@patch("custom_components.terneo.sensor.mqtt")
 async def test_state_sensor_mqtt_message_handling(mock_mqtt) -> None:
     """Test MQTT message handling for state sensor."""
     hass = MagicMock()
@@ -266,7 +266,7 @@ async def test_sensor_async_setup_entry_with_energy() -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.sensor.mqtt")
+@patch("custom_components.terneo.sensor.mqtt")
 async def test_power_sensor(mock_mqtt) -> None:
     """Test power sensor functionality."""
     unsubscribe_mock = MagicMock()
@@ -313,7 +313,7 @@ async def test_power_sensor(mock_mqtt) -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.sensor.mqtt")
+@patch("custom_components.terneo.sensor.mqtt")
 async def test_energy_sensor(mock_mqtt) -> None:
     """Test energy sensor functionality."""
     unsubscribe_mock = MagicMock()

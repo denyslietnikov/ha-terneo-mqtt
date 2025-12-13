@@ -14,8 +14,6 @@ This integration provides the following entities for each configured Terneo devi
   - Mode (Off/Idle/Heat based on device state)
   - Power (current power consumption in watts, requires rated power setting)
   - Energy (accumulated energy consumption in kWh, requires rated power setting)
-- **Binary Sensor Entity**:
-  - None
 - **Number Entity**:
   - Brightness (0-9 for display brightness)
 - **Select Entity**:
@@ -23,7 +21,7 @@ This integration provides the following entities for each configured Terneo devi
 
 ## Installation
 
-1. Copy the `custom_components/terneo_mqtt` folder to your Home Assistant `custom_components` directory.
+1. Copy the `custom_components/terneo` folder to your Home Assistant `custom_components` directory.
 2. Restart Home Assistant.
 3. Add the integration via the UI: Settings > Devices & Services > Add Integration > TerneoMQ.
 
@@ -37,13 +35,11 @@ During setup:
 
 After setup, you can configure additional options:
 - **Topic prefix**: MQTT topic prefix used by devices
-- **Supports air temperature**: Whether devices publish air temperature sensor data. If disabled, floor temperature will be used as current temperature.
 - **Rated power (W)**: Rated power of the heating element in watts. When set above 0, enables power and energy sensors for HA Energy dashboard integration. Set to 0 to disable energy monitoring.
 ## MQTT Topics
 
 The integration subscribes to and publishes on the following topics:
 
-- `{prefix}/{client_id}/airTemp` - Current air temperature (optional, falls back to floor temperature if not available)
 - `{prefix}/{client_id}/setTemp` - Target temperature (commands)
 - `{prefix}/{client_id}/floorTemp` - Floor temperature
 - `{prefix}/{client_id}/protTemp` - Protection temperature
@@ -51,6 +47,7 @@ The integration subscribes to and publishes on the following topics:
 - `{prefix}/{client_id}/powerOff` - Power state (0=on, 1=off)
 - `{prefix}/{client_id}/mode` - Operation mode (0=auto/schedule, 1=manual)
 - `{prefix}/{client_id}/bright` - Display brightness
+- `{prefix}/{client_id}/airTemp` - Current air temperature (optional)
 
 ## HVAC Mode Logic
 
@@ -60,18 +57,6 @@ The climate entity intelligently manages HVAC modes:
 - **OFF**: Device is powered off
 
 When the device starts heating (load changes to 1), the mode automatically switches to HEAT to accurately reflect the current state, regardless of the configured mode.
-
-## Running Tests
-
-To run the test suite:
-
-```bash
-# Activate virtual environment
-source venv/bin/activate
-
-# Run tests
-python -m pytest
-```
 
 ## License
 
