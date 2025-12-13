@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.components.mqtt import ReceiveMessage
-from homeassistant.core import HomeAssistant
 
 from custom_components.terneo_mqtt.select import TerneoSelect
 
@@ -11,14 +10,14 @@ from custom_components.terneo_mqtt.select import TerneoSelect
 @pytest.mark.asyncio
 async def test_select_entity_creation() -> None:
     """Test select entity initialization."""
-    hass = MagicMock()
+    _ = MagicMock()
     entity = TerneoSelect(
         client_id="terneo_ax_1B0026",
         prefix="terneo",
         sensor_type="mode",
         name="Mode",
         options=["schedule", "manual", "away", "temporary"],
-        topic_suffix="mode"
+        topic_suffix="mode",
     )
 
     assert entity._client_id == "terneo_ax_1B0026"
@@ -29,7 +28,7 @@ async def test_select_entity_creation() -> None:
 
 
 @pytest.mark.asyncio
-@patch('custom_components.terneo_mqtt.select.mqtt')
+@patch("custom_components.terneo_mqtt.select.mqtt")
 async def test_select_async_added_to_hass(mock_mqtt) -> None:
     """Test MQTT subscription when entity is added."""
     unsubscribe_mock = MagicMock()
@@ -41,18 +40,20 @@ async def test_select_async_added_to_hass(mock_mqtt) -> None:
         sensor_type="mode",
         name="Mode",
         options=["schedule", "manual", "away", "temporary"],
-        topic_suffix="mode"
+        topic_suffix="mode",
     )
     entity.hass = hass
 
     await entity.async_added_to_hass()
 
-    mock_mqtt.async_subscribe.assert_called_once_with(hass, entity._topic, entity._handle_message, qos=0)
+    mock_mqtt.async_subscribe.assert_called_once_with(
+        hass, entity._topic, entity._handle_message, qos=0
+    )
     assert entity._unsubscribe == unsubscribe_mock
 
 
 @pytest.mark.asyncio
-@patch('custom_components.terneo_mqtt.select.mqtt')
+@patch("custom_components.terneo_mqtt.select.mqtt")
 async def test_select_async_will_remove_from_hass(mock_mqtt) -> None:
     """Test MQTT unsubscription when entity is removed."""
     unsubscribe_mock = MagicMock()
@@ -64,7 +65,7 @@ async def test_select_async_will_remove_from_hass(mock_mqtt) -> None:
         sensor_type="mode",
         name="Mode",
         options=["schedule", "manual", "away", "temporary"],
-        topic_suffix="mode"
+        topic_suffix="mode",
     )
     entity.hass = hass
 
@@ -75,7 +76,7 @@ async def test_select_async_will_remove_from_hass(mock_mqtt) -> None:
 
 
 @pytest.mark.asyncio
-@patch('homeassistant.components.mqtt.async_publish')
+@patch("homeassistant.components.mqtt.async_publish")
 async def test_select_async_select_option(mock_async_publish) -> None:
     """Test selecting an option."""
     mock_async_publish.return_value = None
@@ -86,14 +87,16 @@ async def test_select_async_select_option(mock_async_publish) -> None:
         sensor_type="mode",
         name="Mode",
         options=["schedule", "manual", "away", "temporary"],
-        topic_suffix="mode"
+        topic_suffix="mode",
     )
     entity.hass = hass
     entity.async_write_ha_state = MagicMock()
 
     # Test manual
     await entity.async_select_option("manual")
-    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "3", qos=0, retain=True)
+    mock_async_publish.assert_called_once_with(
+        hass, entity._command_topic, "3", qos=0, retain=True
+    )
     assert entity.current_option == "manual"
     entity.async_write_ha_state.assert_called_once()
 
@@ -103,7 +106,9 @@ async def test_select_async_select_option(mock_async_publish) -> None:
 
     # Test schedule
     await entity.async_select_option("schedule")
-    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "0", qos=0, retain=True)
+    mock_async_publish.assert_called_once_with(
+        hass, entity._command_topic, "0", qos=0, retain=True
+    )
     assert entity.current_option == "schedule"
     entity.async_write_ha_state.assert_called_once()
 
@@ -113,7 +118,9 @@ async def test_select_async_select_option(mock_async_publish) -> None:
 
     # Test away
     await entity.async_select_option("away")
-    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "4", qos=0, retain=True)
+    mock_async_publish.assert_called_once_with(
+        hass, entity._command_topic, "4", qos=0, retain=True
+    )
     assert entity.current_option == "away"
     entity.async_write_ha_state.assert_called_once()
 
@@ -123,7 +130,9 @@ async def test_select_async_select_option(mock_async_publish) -> None:
 
     # Test temporary
     await entity.async_select_option("temporary")
-    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "5", qos=0, retain=True)
+    mock_async_publish.assert_called_once_with(
+        hass, entity._command_topic, "5", qos=0, retain=True
+    )
     assert entity.current_option == "temporary"
     entity.async_write_ha_state.assert_called_once()
 
@@ -131,14 +140,14 @@ async def test_select_async_select_option(mock_async_publish) -> None:
 @pytest.mark.asyncio
 async def test_select_mqtt_message_handling() -> None:
     """Test MQTT message handling."""
-    hass = MagicMock()
+    _ = MagicMock()
     entity = TerneoSelect(
         client_id="terneo_ax_1B0026",
         prefix="terneo",
         sensor_type="mode",
         name="Mode",
         options=["schedule", "manual", "away", "temporary"],
-        topic_suffix="mode"
+        topic_suffix="mode",
     )
 
     # Mock write_ha_state
@@ -151,7 +160,7 @@ async def test_select_mqtt_message_handling() -> None:
         qos=0,
         retain=False,
         subscribed_topic="terneo/terneo_ax_1B0026/mode",
-        timestamp=1234567890
+        timestamp=1234567890,
     )
     entity._handle_message(msg)
 
@@ -168,7 +177,7 @@ async def test_select_mqtt_message_handling() -> None:
         qos=0,
         retain=False,
         subscribed_topic="terneo/terneo_ax_1B0026/mode",
-        timestamp=1234567890
+        timestamp=1234567890,
     )
     entity._handle_message(msg)
 
@@ -185,7 +194,7 @@ async def test_select_mqtt_message_handling() -> None:
         qos=0,
         retain=False,
         subscribed_topic="terneo/terneo_ax_1B0026/mode",
-        timestamp=1234567890
+        timestamp=1234567890,
     )
     entity._handle_message(msg)
 
@@ -202,7 +211,7 @@ async def test_select_mqtt_message_handling() -> None:
         qos=0,
         retain=False,
         subscribed_topic="terneo/terneo_ax_1B0026/mode",
-        timestamp=1234567890
+        timestamp=1234567890,
     )
     entity._handle_message(msg)
 
@@ -211,12 +220,14 @@ async def test_select_mqtt_message_handling() -> None:
 
 
 @pytest.mark.asyncio
-@patch('homeassistant.components.mqtt.async_publish')
+@patch("homeassistant.components.mqtt.async_publish")
 async def test_select_restore_state(mock_async_publish) -> None:
     """Test state restoration without publishing to MQTT."""
     mock_async_publish.return_value = None
     mock_subscribe = AsyncMock()
-    with patch('homeassistant.components.mqtt.async_subscribe', return_value=mock_subscribe):
+    with patch(
+        "homeassistant.components.mqtt.async_subscribe", return_value=mock_subscribe
+    ):
         hass = MagicMock()
         entity = TerneoSelect(
             client_id="terneo_ax_1B0026",
@@ -224,7 +235,7 @@ async def test_select_restore_state(mock_async_publish) -> None:
             sensor_type="mode",
             name="Mode",
             options=["schedule", "manual", "away", "temporary"],
-            topic_suffix="mode"
+            topic_suffix="mode",
         )
         entity.hass = hass
 

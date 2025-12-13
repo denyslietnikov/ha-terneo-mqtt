@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.components.mqtt import ReceiveMessage
-from homeassistant.core import HomeAssistant
 
 from custom_components.terneo_mqtt.number import TerneoNumber
 
@@ -11,7 +10,7 @@ from custom_components.terneo_mqtt.number import TerneoNumber
 @pytest.mark.asyncio
 async def test_number_entity_creation() -> None:
     """Test number entity initialization."""
-    hass = MagicMock()
+    _ = MagicMock()
     entity = TerneoNumber(
         client_id="terneo_ax_1B0026",
         prefix="terneo",
@@ -20,7 +19,7 @@ async def test_number_entity_creation() -> None:
         min_value=0,
         max_value=9,
         step=1,
-        topic_suffix="bright"
+        topic_suffix="bright",
     )
 
     assert entity._client_id == "terneo_ax_1B0026"
@@ -33,7 +32,7 @@ async def test_number_entity_creation() -> None:
 
 
 @pytest.mark.asyncio
-@patch('custom_components.terneo_mqtt.number.mqtt')
+@patch("custom_components.terneo_mqtt.number.mqtt")
 async def test_number_async_added_to_hass(mock_mqtt) -> None:
     """Test MQTT subscription when entity is added."""
     unsubscribe_mock = MagicMock()
@@ -47,7 +46,7 @@ async def test_number_async_added_to_hass(mock_mqtt) -> None:
         min_value=0,
         max_value=9,
         step=1,
-        topic_suffix="bright"
+        topic_suffix="bright",
     )
     entity.hass = hass
 
@@ -56,12 +55,14 @@ async def test_number_async_added_to_hass(mock_mqtt) -> None:
 
     await entity.async_added_to_hass()
 
-    mock_mqtt.async_subscribe.assert_called_once_with(hass, entity._topic, entity._handle_message, qos=0)
+    mock_mqtt.async_subscribe.assert_called_once_with(
+        hass, entity._topic, entity._handle_message, qos=0
+    )
     assert entity._unsubscribe == unsubscribe_mock
 
 
 @pytest.mark.asyncio
-@patch('custom_components.terneo_mqtt.number.mqtt')
+@patch("custom_components.terneo_mqtt.number.mqtt")
 async def test_number_async_will_remove_from_hass(mock_mqtt) -> None:
     """Test MQTT unsubscription when entity is removed."""
     unsubscribe_mock = MagicMock()
@@ -75,7 +76,7 @@ async def test_number_async_will_remove_from_hass(mock_mqtt) -> None:
         min_value=0,
         max_value=9,
         step=1,
-        topic_suffix="bright"
+        topic_suffix="bright",
     )
     entity.hass = hass
 
@@ -86,7 +87,7 @@ async def test_number_async_will_remove_from_hass(mock_mqtt) -> None:
 
 
 @pytest.mark.asyncio
-@patch('homeassistant.components.mqtt.async_publish')
+@patch("homeassistant.components.mqtt.async_publish")
 async def test_number_set_native_value(mock_async_publish) -> None:
     """Test setting the native value."""
     mock_async_publish.return_value = None
@@ -99,14 +100,16 @@ async def test_number_set_native_value(mock_async_publish) -> None:
         min_value=0,
         max_value=9,
         step=1,
-        topic_suffix="bright"
+        topic_suffix="bright",
     )
     entity.hass = hass
     entity.async_write_ha_state = MagicMock()
 
     await entity.async_set_native_value(5.0)
 
-    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "5", qos=0, retain=True)
+    mock_async_publish.assert_called_once_with(
+        hass, entity._command_topic, "5", qos=0, retain=True
+    )
     assert entity.native_value == 5.0
     entity.async_write_ha_state.assert_called_once()
 
@@ -114,7 +117,7 @@ async def test_number_set_native_value(mock_async_publish) -> None:
 @pytest.mark.asyncio
 async def test_number_mqtt_message_handling() -> None:
     """Test MQTT message handling."""
-    hass = MagicMock()
+    _ = MagicMock()
     entity = TerneoNumber(
         client_id="terneo_ax_1B0026",
         prefix="terneo",
@@ -123,7 +126,7 @@ async def test_number_mqtt_message_handling() -> None:
         min_value=0,
         max_value=9,
         step=1,
-        topic_suffix="bright"
+        topic_suffix="bright",
     )
 
     # Mock write_ha_state
@@ -136,7 +139,7 @@ async def test_number_mqtt_message_handling() -> None:
         qos=0,
         retain=False,
         subscribed_topic="terneo/terneo_ax_1B0026/bright",
-        timestamp=1234567890
+        timestamp=1234567890,
     )
     entity._handle_message(msg)
 
@@ -145,12 +148,14 @@ async def test_number_mqtt_message_handling() -> None:
 
 
 @pytest.mark.asyncio
-@patch('homeassistant.components.mqtt.async_publish')
+@patch("homeassistant.components.mqtt.async_publish")
 async def test_number_restore_state(mock_async_publish) -> None:
     """Test state restoration without publishing to MQTT."""
     mock_async_publish.return_value = None
     mock_subscribe = AsyncMock()
-    with patch('homeassistant.components.mqtt.async_subscribe', return_value=mock_subscribe):
+    with patch(
+        "homeassistant.components.mqtt.async_subscribe", return_value=mock_subscribe
+    ):
         hass = MagicMock()
         entity = TerneoNumber(
             client_id="terneo_ax_1B0026",
@@ -160,7 +165,7 @@ async def test_number_restore_state(mock_async_publish) -> None:
             min_value=0,
             max_value=9,
             step=1,
-            topic_suffix="bright"
+            topic_suffix="bright",
         )
         entity.hass = hass
 

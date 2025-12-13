@@ -1,16 +1,12 @@
 """Number platform for TerneoMQ integration."""
 import logging
-from typing import Any
 
-from homeassistant.components.mqtt import ReceiveMessage
 from homeassistant.components.number import NumberEntity
 from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.util import slugify
 
 from .base_entity import TerneoMQTTEntity
 from .const import DOMAIN
@@ -25,12 +21,18 @@ async def async_setup_entry(
 ) -> None:
     """Set up the TerneoMQ number entities."""
     devices = config_entry.data.get("devices", [])
-    prefix = config_entry.options.get("topic_prefix", config_entry.data.get("prefix", "terneo"))
+    prefix = config_entry.options.get(
+        "topic_prefix", config_entry.data.get("prefix", "terneo")
+    )
 
     entities = []
     for device in devices:
         client_id = device["client_id"]
-        entities.append(TerneoNumber(client_id, prefix, "brightness", "Brightness", 0, 9, 1, "bright"))
+        entities.append(
+            TerneoNumber(
+                client_id, prefix, "brightness", "Brightness", 0, 9, 1, "bright"
+            )
+        )
 
     async_add_entities(entities)
 
@@ -50,7 +52,15 @@ class TerneoNumber(TerneoMQTTEntity, NumberEntity):
         topic_suffix: str,
     ) -> None:
         """Initialize the number entity."""
-        super().__init__(None, client_id, prefix, sensor_type, name, topic_suffix, track_availability=False)  # hass will be set later
+        super().__init__(
+            None,
+            client_id,
+            prefix,
+            sensor_type,
+            name,
+            topic_suffix,
+            track_availability=False,
+        )  # hass will be set later
         self._attr_unique_id = f"{client_id}_{sensor_type}"
         self._attr_name = f"Terneo {client_id} {name}"
         self._attr_native_min_value = min_value
@@ -69,18 +79,28 @@ class TerneoNumber(TerneoMQTTEntity, NumberEntity):
         """Subscribe to MQTT topic when entity is added."""
         await super().async_added_to_hass()
         self.hass = self.hass  # Already set, but ensure
-        
+
         # Restore previous state
         if (last_state := await self.async_get_last_state()) is not None:
             if last_state.state not in (None, "unknown", "unavailable"):
                 try:
                     self._attr_native_value = float(last_state.state)
-                    _LOGGER.debug("Restored %s state: %s", self._sensor_type, self._attr_native_value)
+                    _LOGGER.debug(
+                        "Restored %s state: %s",
+                        self._sensor_type,
+                        self._attr_native_value,
+                    )
                 except (ValueError, TypeError):
-                    _LOGGER.warning("Could not restore %s state from %s", self._sensor_type, last_state.state)
-        
+                    _LOGGER.warning(
+                        "Could not restore %s state from %s",
+                        self._sensor_type,
+                        last_state.state,
+                    )
+
         # Subscribe to MQTT topic
-        self._unsubscribe = await mqtt.async_subscribe(self.hass, self._topic, self._handle_message, qos=0)
+        self._unsubscribe = await mqtt.async_subscribe(
+            self.hass, self._topic, self._handle_message, qos=0
+        )
 
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe from MQTT topic when entity is removed."""

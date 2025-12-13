@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
 
 from homeassistant.components import climate, mqtt
 from homeassistant.components.climate import ClimateEntity
@@ -16,6 +15,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -23,7 +23,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up TerneoMQ climate from a config entry."""
     devices = config_entry.data.get("devices", [])
-    prefix = config_entry.options.get("topic_prefix", config_entry.data.get("prefix", "terneo"))
+    prefix = config_entry.options.get(
+        "topic_prefix", config_entry.data.get("prefix", "terneo")
+    )
     supports_air_temp = config_entry.options.get("supports_air_temp", True)
     entities = []
     for device in devices:
@@ -42,14 +44,26 @@ class TerneoMQTTClimate(ClimateEntity):
         | climate.ClimateEntityFeature.TURN_OFF
         | climate.ClimateEntityFeature.TURN_ON
     )
-    _attr_hvac_modes = [climate.HVACMode.HEAT, climate.HVACMode.OFF, climate.HVACMode.AUTO]
+    _attr_hvac_modes = [
+        climate.HVACMode.HEAT,
+        climate.HVACMode.OFF,
+        climate.HVACMode.AUTO,
+    ]
     _attr_hvac_mode = climate.HVACMode.OFF
     _attr_hvac_action = climate.HVACAction.OFF
     _attr_min_temp = 5
     _attr_max_temp = 35
     _attr_precision = 0.5
 
-    def __init__(self, hass: HomeAssistant, client_id: str, topic_prefix: str, supports_air_temp: bool = True, state_topic: str = None, command_topic: str = None) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        client_id: str,
+        topic_prefix: str,
+        supports_air_temp: bool = True,
+        state_topic: str = None,
+        command_topic: str = None,
+    ) -> None:
         """Initialize the climate device."""
         self.hass = hass
         self._client_id = client_id
@@ -140,10 +154,16 @@ class TerneoMQTTClimate(ClimateEntity):
                 self._update_hvac_mode_from_temps()
                 updated = True
             elif msg.topic == self._load_topic:
-                old_load = self._load
                 self._load = int(msg.payload)
-                # Reset optimistic mode only if load changes to 1 (device actually started heating)
-                if self._load == 1 and old_load != 1:
+                # Reset optimistic mode based on real state change
+                if self._optimistic_mode == climate.HVACMode.HEAT and self._load == 1:
+                    # Device started heating, HEAT is now real
+                    if self._optimistic_task:
+                        self._optimistic_task.cancel()
+                        self._optimistic_task = None
+                    self._optimistic_mode = None
+                elif self._optimistic_mode == climate.HVACMode.AUTO and self._load == 0:
+                    # Device stopped heating, AUTO is now real
                     if self._optimistic_task:
                         self._optimistic_task.cancel()
                         self._optimistic_task = None
@@ -158,14 +178,14 @@ class TerneoMQTTClimate(ClimateEntity):
                 self._mode = int(msg.payload)
                 self._update_hvac_mode_from_temps()
                 updated = True
-            
+
             if updated:
                 self.async_write_ha_state()
         except ValueError:
             _LOGGER.error("Invalid payload in message: %s", msg.payload)
 
     def _update_hvac_mode_from_temps(self) -> None:
-        """Update hvac_mode and hvac_action based on powerOff and load."""
+        """Update hvac_mode and hvac_action based on powerOff, load and temperatures."""
         # If optimistic mode is set, use it instead of calculating
         if self._optimistic_mode is not None:
             self._attr_hvac_mode = self._optimistic_mode
@@ -176,13 +196,15 @@ class TerneoMQTTClimate(ClimateEntity):
             elif self._optimistic_mode == climate.HVACMode.AUTO:
                 self._attr_hvac_action = climate.HVACAction.IDLE
             return
-        
-        # hvac_mode is based only on powerOff and load
+
+        # hvac_mode is based on powerOff, load and temperatures
         if self._power_off == 1:
             self._attr_hvac_mode = climate.HVACMode.OFF
             self._attr_hvac_action = climate.HVACAction.OFF
         elif self._power_off == 0:
-            if self._load == 0:
+            # Check if heating is needed based on temperatures
+            heating_needed = self._is_heating_needed()
+            if not heating_needed or self._load == 0:
                 self._attr_hvac_mode = climate.HVACMode.AUTO
                 self._attr_hvac_action = climate.HVACAction.IDLE
             elif self._load == 1:
@@ -196,10 +218,16 @@ class TerneoMQTTClimate(ClimateEntity):
             # Unknown power_off state, default to OFF
             self._attr_hvac_mode = climate.HVACMode.OFF
             self._attr_hvac_action = climate.HVACAction.OFF
-        
+
         # Fallback: if no airTemp but have floorTemp, use floorTemp as current temp
         if self._attr_current_temperature is None and self._floor_temp is not None:
             self._attr_current_temperature = self._floor_temp
+
+    def _is_heating_needed(self) -> bool:
+        """Check if heating is needed based on target and current temperatures."""
+        if self._attr_target_temperature is None or self._floor_temp is None:
+            return True  # Assume heating needed if temperatures unknown
+        return self._attr_target_temperature > self._floor_temp
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
@@ -209,12 +237,37 @@ class TerneoMQTTClimate(ClimateEntity):
             # If currently OFF, switch to HEAT when setting temperature
             if self._attr_hvac_mode == climate.HVACMode.OFF:
                 _LOGGER.debug("Switching to HEAT mode for temperature setting")
-                await mqtt.async_publish(self.hass, self._mode_cmd_topic, "3", retain=True)
-                await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
+                await mqtt.async_publish(
+                    self.hass, self._mode_cmd_topic, "3", retain=True
+                )
+                await mqtt.async_publish(
+                    self.hass, self._power_off_cmd_topic, "0", retain=True
+                )
+                self._power_off = 0  # Update local state
+                self._mode = 3  # Update local state
+                self._load = 1  # Optimistically assume heating starts
                 self._attr_hvac_mode = climate.HVACMode.HEAT
-            await mqtt.async_publish(self.hass, self._set_temp_cmd_topic, str(temperature), retain=True)
+            await mqtt.async_publish(
+                self.hass, self._set_temp_cmd_topic, str(temperature), retain=True
+            )
             # Optimistically update the state
             self._attr_target_temperature = temperature
+
+            # If temperature is below floor temp, optimistically set to AUTO
+            if (
+                self._floor_temp is not None
+                and temperature < self._floor_temp
+                and self._power_off == 0
+            ):
+                self._optimistic_mode = climate.HVACMode.AUTO
+                if self._optimistic_task:
+                    self._optimistic_task.cancel()
+                self._optimistic_task = self.hass.loop.create_task(
+                    self._delay_reset_optimistic_mode(60)
+                )
+
+            # Update mode based on new temperature
+            self._update_hvac_mode_from_temps()
             self.async_write_ha_state()
 
     async def async_set_hvac_mode(self, hvac_mode: str) -> None:
@@ -223,22 +276,30 @@ class TerneoMQTTClimate(ClimateEntity):
         if hvac_mode == climate.HVACMode.HEAT:
             # Set to manual mode (3) and turn on
             await mqtt.async_publish(self.hass, self._mode_cmd_topic, "3", retain=True)
-            await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
+            await mqtt.async_publish(
+                self.hass, self._power_off_cmd_topic, "0", retain=True
+            )
             # Set optimistic mode for 60 seconds
             self._optimistic_mode = climate.HVACMode.HEAT
             if self._optimistic_task:
                 self._optimistic_task.cancel()
-            self._optimistic_task = self.hass.loop.create_task(self._delay_reset_optimistic_mode(60))
+            self._optimistic_task = self.hass.loop.create_task(
+                self._delay_reset_optimistic_mode(60)
+            )
         elif hvac_mode == climate.HVACMode.AUTO:
             # Turn on (leave current mode as is)
-            await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
+            await mqtt.async_publish(
+                self.hass, self._power_off_cmd_topic, "0", retain=True
+            )
             # Reset optimistic mode
             if self._optimistic_task:
                 self._optimistic_task.cancel()
                 self._optimistic_task = None
             self._optimistic_mode = None
         elif hvac_mode == climate.HVACMode.OFF:
-            await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "1", retain=True)
+            await mqtt.async_publish(
+                self.hass, self._power_off_cmd_topic, "1", retain=True
+            )
             # Reset optimistic mode
             if self._optimistic_task:
                 self._optimistic_task.cancel()

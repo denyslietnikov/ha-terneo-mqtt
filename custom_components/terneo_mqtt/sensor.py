@@ -1,15 +1,15 @@
 """Sensor platform for TerneoMQ integration."""
-import logging
-from typing import Any
 
-from homeassistant.components.mqtt import ReceiveMessage
 from homeassistant.components import mqtt
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util import slugify
 
 from .base_entity import TerneoMQTTEntity
 from .const import DOMAIN
@@ -22,11 +22,14 @@ async def async_setup_entry(
 ) -> None:
     """Set up the TerneoMQ sensor platform."""
     devices = config_entry.data.get("devices", [])
-    prefix = config_entry.options.get("topic_prefix", config_entry.data.get("prefix", "terneo"))
+    prefix = config_entry.options.get(
+        "topic_prefix", config_entry.data.get("prefix", "terneo")
+    )
     entities = []
     for device in devices:
         client_id = device["client_id"]
-        entities.extend([
+        entities.extend(
+            [
                 TerneoSensor(
                     client_id=client_id,
                     prefix=prefix,
@@ -61,7 +64,8 @@ async def async_setup_entry(
                     client_id=client_id,
                     prefix=prefix,
                 ),
-            ])
+            ]
+        )
     if entities:
         async_add_entities(entities)
 
@@ -81,7 +85,9 @@ class TerneoSensor(TerneoMQTTEntity, SensorEntity):
         topic_suffix: str,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(None, client_id, prefix, sensor_type, name, topic_suffix)  # hass will be set later
+        super().__init__(
+            None, client_id, prefix, sensor_type, name, topic_suffix
+        )  # hass will be set later
         self._attr_unique_id = f"{client_id}_{sensor_type}"
         self._attr_name = f"Terneo {client_id} {name}"
         self._attr_device_class = device_class
@@ -98,7 +104,9 @@ class TerneoSensor(TerneoMQTTEntity, SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topic when entity is added."""
-        self._unsubscribe = await mqtt.async_subscribe(self.hass, self._topic, self._handle_message, qos=0)
+        self._unsubscribe = await mqtt.async_subscribe(
+            self.hass, self._topic, self._handle_message, qos=0
+        )
 
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe from MQTT topic when entity is removed."""
@@ -143,22 +151,31 @@ class TerneoStateSensor(SensorEntity):
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topics when entity is added."""
         self._unsub_power_off = await mqtt.async_subscribe(
-            self.hass, f"{self._prefix}/{self._client_id}/powerOff", self._handle_message, qos=0
+            self.hass,
+            f"{self._prefix}/{self._client_id}/powerOff",
+            self._handle_message,
+            qos=0,
         )
         self._unsub_load = await mqtt.async_subscribe(
-            self.hass, f"{self._prefix}/{self._client_id}/load", self._handle_message, qos=0
+            self.hass,
+            f"{self._prefix}/{self._client_id}/load",
+            self._handle_message,
+            qos=0,
         )
         self._unsub_mode = await mqtt.async_subscribe(
-            self.hass, f"{self._prefix}/{self._client_id}/mode", self._handle_message, qos=0
+            self.hass,
+            f"{self._prefix}/{self._client_id}/mode",
+            self._handle_message,
+            qos=0,
         )
 
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe from MQTT topics when entity is removed."""
-        if hasattr(self, '_unsub_power_off'):
+        if hasattr(self, "_unsub_power_off"):
             self._unsub_power_off()
-        if hasattr(self, '_unsub_load'):
+        if hasattr(self, "_unsub_load"):
             self._unsub_load()
-        if hasattr(self, '_unsub_mode'):
+        if hasattr(self, "_unsub_mode"):
             self._unsub_mode()
 
     @callback
@@ -175,7 +192,7 @@ class TerneoStateSensor(SensorEntity):
             elif msg.topic.endswith("/mode"):
                 self._mode = int(msg.payload)
                 updated = True
-            
+
             if updated:
                 self._update_mode()
                 self.async_write_ha_state()

@@ -2,11 +2,12 @@
 import pytest
 from unittest.mock import MagicMock
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.terneo_mqtt import DOMAIN
-from custom_components.terneo_mqtt.config_flow import TerneoMQTTConfigFlow, TerneoMQTTOptionsFlow
+from custom_components.terneo_mqtt.config_flow import (
+    TerneoMQTTConfigFlow,
+    TerneoMQTTOptionsFlow,
+)
 
 
 @pytest.mark.asyncio
@@ -22,15 +23,14 @@ async def test_config_flow_user() -> None:
     assert result["step_id"] == "user"
 
     # Test with valid data - should create entry directly
-    result = await flow.async_step_user({
-        "client_ids": "terneo_ax_1B0026",
-        "topic_prefix": "terneo"
-    })
+    result = await flow.async_step_user(
+        {"client_ids": "terneo_ax_1B0026", "topic_prefix": "terneo"}
+    )
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         "prefix": "terneo",
-        "devices": [{"client_id": "terneo_ax_1B0026"}]
+        "devices": [{"client_id": "terneo_ax_1B0026"}],
     }
 
 
@@ -42,17 +42,13 @@ async def test_config_flow_full() -> None:
     flow.hass = hass
 
     # Step 1: user - should create entry directly
-    result = await flow.async_step_user({
-        "client_ids": "terneo_ax_1,terneo_ax_2",
-        "topic_prefix": "terneo"
-    })
+    result = await flow.async_step_user(
+        {"client_ids": "terneo_ax_1,terneo_ax_2", "topic_prefix": "terneo"}
+    )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         "prefix": "terneo",
-        "devices": [
-            {"client_id": "terneo_ax_1"},
-            {"client_id": "terneo_ax_2"}
-        ]
+        "devices": [{"client_id": "terneo_ax_1"}, {"client_id": "terneo_ax_2"}],
     }
 
 
@@ -74,9 +70,7 @@ async def test_options_flow() -> None:
     assert result["step_id"] == "init"
 
     # Test with valid data
-    result = await flow.async_step_init({
-        "topic_prefix": "new_terneo"
-    })
+    result = await flow.async_step_init({"topic_prefix": "new_terneo"})
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {"topic_prefix": "new_terneo"}
