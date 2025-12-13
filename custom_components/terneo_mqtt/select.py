@@ -48,7 +48,7 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
         topic_suffix: str,
     ) -> None:
         """Initialize the select entity."""
-        super().__init__(None, client_id, prefix, sensor_type, name, topic_suffix)  # hass will be set later
+        super().__init__(None, client_id, prefix, sensor_type, name, topic_suffix, track_availability=False)  # hass will be set later
         self._attr_unique_id = f"{client_id}_{sensor_type}"
         self._attr_name = f"Terneo {client_id} {name}"
         self._options = options
