@@ -11,7 +11,6 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.event import async_track_time_interval
 
-from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,14 +55,23 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
 
     async def publish_command(self, payload: str) -> None:
         """Publish a command to MQTT."""
-        _LOGGER.debug("Publishing %s command: %s to %s", self._sensor_type, payload, self._command_topic)
-        await mqtt.async_publish(self.hass, self._command_topic, payload, qos=0, retain=True)
+        _LOGGER.debug(
+            "Publishing %s command: %s to %s",
+            self._sensor_type,
+            payload,
+            self._command_topic,
+        )
+        await mqtt.async_publish(
+            self.hass, self._command_topic, payload, qos=0, retain=True
+        )
 
     async def async_added_to_hass(self) -> None:
         """Set up availability timer when entity is added."""
         await super().async_added_to_hass()
         if self.track_availability:
-            self._unavailable_timer = async_track_time_interval(self.hass, self._check_availability, timedelta(minutes=5))
+            self._unavailable_timer = async_track_time_interval(
+                self.hass, self._check_availability, timedelta(minutes=5)
+            )
 
     async def async_will_remove_from_hass(self) -> None:
         """Cancel availability timer when entity is removed."""
@@ -82,7 +90,12 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
     @callback
     def _handle_message(self, msg: ReceiveMessage) -> None:
         """Handle incoming MQTT message."""
-        _LOGGER.debug("Received MQTT message for %s: %s %s", self._sensor_type, msg.topic, msg.payload)
+        _LOGGER.debug(
+            "Received MQTT message for %s: %s %s",
+            self._sensor_type,
+            msg.topic,
+            msg.payload,
+        )
         self._last_update = time.time()
         if self.track_availability:
             self._attr_available = True
@@ -91,4 +104,6 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
             self.update_value(value)
             self.async_write_ha_state()
         except (ValueError, TypeError) as e:
-            _LOGGER.warning("Invalid payload for %s: %s (%s)", self._sensor_type, msg.payload, e)
+            _LOGGER.warning(
+                "Invalid payload for %s: %s (%s)", self._sensor_type, msg.payload, e
+            )
