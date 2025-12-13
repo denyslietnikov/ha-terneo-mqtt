@@ -103,15 +103,6 @@ class TerneoMQTTClimate(ClimateEntity):
         self.async_on_remove(self._unsub_power_off)
         self.async_on_remove(self._unsub_mode)
 
-        # Restore state if available
-        last_state = await self.async_get_last_state()
-        if last_state:
-            self._attr_hvac_mode = last_state.state
-            if last_state.attributes:
-                self._attr_current_temperature = last_state.attributes.get("current_temperature")
-                self._attr_target_temperature = last_state.attributes.get("temperature")
-            self.async_write_ha_state()
-
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe from MQTT topics."""
         await super().async_will_remove_from_hass()

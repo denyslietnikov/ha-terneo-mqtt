@@ -5,7 +5,7 @@ import pytest
 from homeassistant.components.mqtt import ReceiveMessage
 from homeassistant.core import HomeAssistant
 
-from custom_components.terneo_mqtt.sensor import TerneoSensor, TerneoModeSensor, async_setup_entry
+from custom_components.terneo_mqtt.sensor import TerneoSensor, TerneoStateSensor, async_setup_entry
 
 
 @pytest.mark.asyncio
@@ -162,21 +162,21 @@ async def test_sensor_async_setup_entry() -> None:
 
 
 @pytest.mark.asyncio
-async def test_mode_sensor_entity_creation() -> None:
-    """Test mode sensor entity initialization."""
-    entity = TerneoModeSensor(client_id="terneo_ax_1B0026", prefix="terneo")
+async def test_state_sensor_entity_creation() -> None:
+    """Test state sensor entity initialization."""
+    entity = TerneoStateSensor(client_id="terneo_ax_1B0026", prefix="terneo")
 
     assert entity._client_id == "terneo_ax_1B0026"
-    assert entity.unique_id == "terneo_ax_1B0026_mode"
-    assert entity.name == "Terneo terneo_ax_1B0026 Mode"
+    assert entity.unique_id == "terneo_ax_1B0026_state"
+    assert entity.name == "Terneo terneo_ax_1B0026 State"
 
 
 @pytest.mark.asyncio
 @patch('custom_components.terneo_mqtt.sensor.mqtt')
-async def test_mode_sensor_mqtt_message_handling(mock_mqtt) -> None:
-    """Test MQTT message handling for mode sensor."""
+async def test_state_sensor_mqtt_message_handling(mock_mqtt) -> None:
+    """Test MQTT message handling for state sensor."""
     hass = MagicMock()
-    entity = TerneoModeSensor(client_id="terneo_ax_1B0026", prefix="terneo")
+    entity = TerneoStateSensor(client_id="terneo_ax_1B0026", prefix="terneo")
     entity.hass = hass
 
     # Mock write_ha_state

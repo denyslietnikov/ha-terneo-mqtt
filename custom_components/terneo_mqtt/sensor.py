@@ -57,7 +57,7 @@ async def async_setup_entry(
                     unit_of_measurement=None,
                     topic_suffix="load",
                 ),
-                TerneoModeSensor(
+                TerneoStateSensor(
                     client_id=client_id,
                     prefix=prefix,
                 ),
@@ -119,15 +119,15 @@ class TerneoSensor(TerneoMQTTEntity, SensorEntity):
         self._attr_native_value = value
 
 
-class TerneoModeSensor(SensorEntity):
-    """Representation of a Terneo mode sensor."""
+class TerneoStateSensor(SensorEntity):
+    """Representation of a Terneo state sensor."""
 
     def __init__(self, client_id: str, prefix: str) -> None:
         """Initialize the mode sensor."""
         self._client_id = client_id
         self._prefix = prefix
-        self._attr_unique_id = f"{client_id}_mode"
-        self._attr_name = f"Terneo {client_id} Mode"
+        self._attr_unique_id = f"{client_id}_state"
+        self._attr_name = f"Terneo {client_id} State"
         self._attr_native_value = None
         self._power_off = None
         self._load = None
