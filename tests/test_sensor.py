@@ -95,7 +95,7 @@ async def test_sensor_mqtt_message_handling() -> None:
     )
 
     # Mock write_ha_state
-    entity.async_write_ha_state = AsyncMock()
+    entity.async_write_ha_state = MagicMock()
 
     # Test temperature message
     msg = ReceiveMessage(
@@ -125,7 +125,7 @@ async def test_sensor_mqtt_message_handling() -> None:
         unit_of_measurement=None,
         topic_suffix="load"
     )
-    load_entity.async_write_ha_state = AsyncMock()
+    load_entity.async_write_ha_state = MagicMock()
 
     msg = ReceiveMessage(
         topic="terneo/terneo_ax_1B0026/load",
@@ -180,7 +180,7 @@ async def test_mode_sensor_mqtt_message_handling(mock_mqtt) -> None:
     entity.hass = hass
 
     # Mock write_ha_state
-    entity.async_write_ha_state = AsyncMock()
+    entity.async_write_ha_state = MagicMock()
 
     # Test powerOff message (off)
     msg = ReceiveMessage(

@@ -102,7 +102,7 @@ async def test_number_set_native_value(mock_async_publish) -> None:
         topic_suffix="bright"
     )
     entity.hass = hass
-    entity.async_write_ha_state = AsyncMock()
+    entity.async_write_ha_state = MagicMock()
 
     await entity.async_set_native_value(5.0)
 
@@ -127,7 +127,7 @@ async def test_number_mqtt_message_handling() -> None:
     )
 
     # Mock write_ha_state
-    entity.async_write_ha_state = AsyncMock()
+    entity.async_write_ha_state = MagicMock()
 
     # Test valid message
     msg = ReceiveMessage(

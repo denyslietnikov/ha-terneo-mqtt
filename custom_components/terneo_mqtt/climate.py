@@ -145,36 +145,26 @@ class TerneoMQTTClimate(ClimateEntity):
             _LOGGER.error("Invalid payload in message: %s", msg.payload)
 
     def _update_hvac_mode_from_temps(self) -> None:
-        """Update hvac_mode and hvac_action based on powerOff, load, mode, and temperatures."""
-        # hvac_mode is based on powerOff, load and mode
+        """Update hvac_mode and hvac_action based on powerOff and load."""
+        # hvac_mode is based only on powerOff and load
         if self._power_off == 1:
             self._attr_hvac_mode = climate.HVACMode.OFF
             self._attr_hvac_action = climate.HVACAction.OFF
-        else:
-            # Determine hvac_mode based on temperature comparison
-            if self._floor_temp is not None and self._attr_target_temperature is not None:
-                # If floor temp is below target, we need heating -> HEAT mode
-                if self._floor_temp < self._attr_target_temperature:
-                    self._attr_hvac_mode = climate.HVACMode.HEAT
-                else:
-                    # Floor temp reached or exceeded target -> AUTO mode
-                    self._attr_hvac_mode = climate.HVACMode.AUTO
-            else:
-                # Fallback: If actively heating (load=1), show HEAT regardless of mode
-                if self._load == 1:
-                    self._attr_hvac_mode = climate.HVACMode.HEAT
-                else:
-                    # Check if mode is available
-                    if self._mode == 0:
-                        self._attr_hvac_mode = climate.HVACMode.AUTO
-                    else:
-                        self._attr_hvac_mode = climate.HVACMode.HEAT
-            
-            # hvac_action based on load
-            if self._load == 1:
+        elif self._power_off == 0:
+            if self._load == 0:
+                self._attr_hvac_mode = climate.HVACMode.AUTO
+                self._attr_hvac_action = climate.HVACAction.IDLE
+            elif self._load == 1:
+                self._attr_hvac_mode = climate.HVACMode.HEAT
                 self._attr_hvac_action = climate.HVACAction.HEATING
             else:
+                # Unknown load state, default to AUTO
+                self._attr_hvac_mode = climate.HVACMode.AUTO
                 self._attr_hvac_action = climate.HVACAction.IDLE
+        else:
+            # Unknown power_off state, default to OFF
+            self._attr_hvac_mode = climate.HVACMode.OFF
+            self._attr_hvac_action = climate.HVACAction.OFF
         
         # Fallback: if no airTemp but have floorTemp, use floorTemp as current temp
         if self._attr_current_temperature is None and self._floor_temp is not None:
@@ -199,13 +189,17 @@ class TerneoMQTTClimate(ClimateEntity):
         """Set new HVAC mode."""
         _LOGGER.debug("Setting HVAC mode to %s", hvac_mode)
         if hvac_mode == climate.HVACMode.HEAT:
-            # Set to manual mode and turn on
-            await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
-            await mqtt.async_publish(self.hass, self._mode_cmd_topic, "1", retain=True)
+            # Set to manual mode (3)
+            await mqtt.async_publish(self.hass, self._mode_cmd_topic, "3", retain=True)
+            # If currently OFF, stay OFF but set mode for when it turns on
+            if self._attr_hvac_mode != climate.HVACMode.OFF:
+                await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
         elif hvac_mode == climate.HVACMode.AUTO:
-            # Set to auto mode and turn on
-            await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
+            # Set to auto mode (0)
             await mqtt.async_publish(self.hass, self._mode_cmd_topic, "0", retain=True)
+            # If currently OFF, stay OFF but set mode for when it turns on
+            if self._attr_hvac_mode != climate.HVACMode.OFF:
+                await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "0", retain=True)
         elif hvac_mode == climate.HVACMode.OFF:
             await mqtt.async_publish(self.hass, self._power_off_cmd_topic, "1", retain=True)
         else:
