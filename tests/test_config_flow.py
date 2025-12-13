@@ -21,14 +21,17 @@ async def test_config_flow_user() -> None:
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    # Test with valid data - should go to device_config
+    # Test with valid data - should create entry directly
     result = await flow.async_step_user({
         "client_ids": "terneo_ax_1B0026",
         "topic_prefix": "terneo"
     })
 
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "device_config"
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"] == {
+        "prefix": "terneo",
+        "devices": [{"client_id": "terneo_ax_1B0026"}]
+    }
 
 
 @pytest.mark.asyncio
@@ -38,33 +41,17 @@ async def test_config_flow_full() -> None:
     flow = TerneoMQTTConfigFlow()
     flow.hass = hass
 
-    # Step 1: user
+    # Step 1: user - should create entry directly
     result = await flow.async_step_user({
         "client_ids": "terneo_ax_1,terneo_ax_2",
         "topic_prefix": "terneo"
-    })
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "device_config"
-
-    # Step 2: device config for terneo_ax_1
-    result = await flow.async_step_device_config({
-        "host": "192.168.1.10",
-        "sn": "12345"
-    })
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "device_config"
-
-    # Step 3: device config for terneo_ax_2
-    result = await flow.async_step_device_config({
-        "host": "",
-        "sn": ""
     })
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         "prefix": "terneo",
         "devices": [
-            {"client_id": "terneo_ax_1", "host": "192.168.1.10", "sn": "12345"},
-            {"client_id": "terneo_ax_2", "host": "", "sn": ""}
+            {"client_id": "terneo_ax_1"},
+            {"client_id": "terneo_ax_2"}
         ]
     }
 
