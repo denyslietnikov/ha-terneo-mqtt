@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant.components.mqtt import ReceiveMessage
 
-from custom_components.terneo_mqtt.climate import TerneoMQTTClimate
+from custom_components.terneo.climate import TerneoMQTTClimate
 
 
 @pytest.mark.asyncio
@@ -353,7 +353,7 @@ async def test_climate_without_air_temp_uses_floor_temp() -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.climate.mqtt")
+@patch("custom_components.terneo.climate.mqtt")
 async def test_climate_async_set_hvac_mode_heat_from_off(mock_mqtt) -> None:
     """Test setting HVAC mode to HEAT from OFF."""
     mock_mqtt.async_publish = AsyncMock()
@@ -379,7 +379,7 @@ async def test_climate_async_set_hvac_mode_heat_from_off(mock_mqtt) -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.climate.mqtt")
+@patch("custom_components.terneo.climate.mqtt")
 async def test_climate_async_set_hvac_mode_auto_from_off(mock_mqtt) -> None:
     """Test setting HVAC mode to AUTO from OFF."""
     mock_mqtt.async_publish = AsyncMock()
@@ -402,7 +402,7 @@ async def test_climate_async_set_hvac_mode_auto_from_off(mock_mqtt) -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.climate.mqtt")
+@patch("custom_components.terneo.climate.mqtt")
 async def test_climate_async_set_temperature(mock_mqtt) -> None:
     """Test setting temperature."""
     mock_mqtt.async_publish = AsyncMock()
@@ -425,7 +425,7 @@ async def test_climate_async_set_temperature(mock_mqtt) -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.climate.mqtt")
+@patch("custom_components.terneo.climate.mqtt")
 async def test_climate_async_set_temperature_from_off(mock_mqtt) -> None:
     """Test setting temperature when device is OFF."""
     mock_mqtt.async_publish = AsyncMock()
@@ -640,7 +640,7 @@ async def test_climate_hvac_mode_based_on_temperature_comparison() -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.climate.mqtt")
+@patch("custom_components.terneo.climate.mqtt")
 async def test_climate_optimistic_mode_heat(mock_mqtt) -> None:
     """Test optimistic mode when setting HEAT from OFF."""
     mock_mqtt.async_publish = AsyncMock()
@@ -711,7 +711,7 @@ async def test_climate_optimistic_mode_heat(mock_mqtt) -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.climate.mqtt")
+@patch("custom_components.terneo.climate.mqtt")
 async def test_climate_optimistic_mode_temperature_auto(mock_mqtt) -> None:
     """Test optimistic mode when setting temperature below floor temp."""
     mock_mqtt.async_publish = AsyncMock()

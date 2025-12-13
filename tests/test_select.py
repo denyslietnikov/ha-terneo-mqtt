@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant.components.mqtt import ReceiveMessage
 
-from custom_components.terneo_mqtt.select import TerneoSelect
+from custom_components.terneo.select import TerneoSelect
 
 
 @pytest.mark.asyncio
@@ -28,7 +28,7 @@ async def test_select_entity_creation() -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.select.mqtt")
+@patch("custom_components.terneo.select.mqtt")
 async def test_select_async_added_to_hass(mock_mqtt) -> None:
     """Test MQTT subscription when entity is added."""
     unsubscribe_mock = MagicMock()
@@ -53,7 +53,7 @@ async def test_select_async_added_to_hass(mock_mqtt) -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo_mqtt.select.mqtt")
+@patch("custom_components.terneo.select.mqtt")
 async def test_select_async_will_remove_from_hass(mock_mqtt) -> None:
     """Test MQTT unsubscription when entity is removed."""
     unsubscribe_mock = MagicMock()

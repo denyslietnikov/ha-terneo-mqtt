@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.terneo_mqtt.config_flow import (
+from custom_components.terneo.config_flow import (
     TerneoMQTTConfigFlow,
     TerneoMQTTOptionsFlow,
 )
