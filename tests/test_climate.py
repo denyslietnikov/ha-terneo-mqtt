@@ -125,7 +125,7 @@ async def test_climate_mqtt_message_handling() -> None:
     # Reset mock
     entity.async_write_ha_state.reset_mock()
 
-    # Test floor temp message (set floor to 20.0)
+    # Test floor temp message (set floor to 20.0, which equals target of 20.0)
     msg = ReceiveMessage(
         topic="terneo/terneo_ax_1B0026/floorTemp",
         payload="20.0",
@@ -136,8 +136,8 @@ async def test_climate_mqtt_message_handling() -> None:
     )
     entity._handle_message(msg)
 
-    # hvac_mode should remain HEAT since powerOff=0
-    assert entity._attr_hvac_mode == "heat"
+    # hvac_mode should be AUTO since floor temp (20.0) >= target temp (20.0)
+    assert entity._attr_hvac_mode == "auto"
     entity.async_write_ha_state.assert_called_once()
 
     # Reset mock
@@ -515,3 +515,90 @@ async def test_climate_device_info() -> None:
     assert device_info["name"] == "Terneo terneo_ax_1B0026"
     assert device_info["manufacturer"] == "Terneo"
     assert device_info["model"] == "AX"
+
+
+@pytest.mark.asyncio
+async def test_climate_hvac_mode_based_on_temperature_comparison() -> None:
+    """Test that hvac_mode changes from HEAT to AUTO when target temp is lowered below floor temp."""
+    hass = MagicMock()
+    entity = TerneoMQTTClimate(hass, "terneo_ax_1B0026", "terneo")
+
+    # Mock write_ha_state
+    entity.async_write_ha_state = AsyncMock()
+
+    # Device is ON
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/powerOff",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/powerOff",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    # Set floor temp to 21°C
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/floorTemp",
+        payload="21.0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/floorTemp",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    # Set target temp to 23°C (above floor temp, should be HEAT mode)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/setTemp",
+        payload="23.0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/setTemp",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+    assert entity._attr_hvac_mode == "heat"
+
+    # Load turns ON (heating actively)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/load",
+        payload="1",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/load",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+    assert entity._attr_hvac_mode == "heat"
+    assert entity._attr_hvac_action == "heating"
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Now lower target temp to 20°C (below floor temp of 21°C)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/setTemp",
+        payload="20.0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/setTemp",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+    
+    # Load turns OFF (target reached, no heating needed)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/load",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/load",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    # Should switch to AUTO mode since floor temp (21) >= target temp (20)
+    assert entity._attr_hvac_mode == "auto"
+    assert entity._attr_hvac_action == "idle"
+    entity.async_write_ha_state.assert_called()

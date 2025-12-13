@@ -123,6 +123,8 @@ class TerneoMQTTClimate(ClimateEntity):
                 updated = True
             elif msg.topic == self._set_temp_topic:
                 self._attr_target_temperature = float(msg.payload)
+                # Update hvac_mode based on setTemp vs floorTemp
+                self._update_hvac_mode_from_temps()
                 updated = True
             elif msg.topic == self._load_topic:
                 self._load = int(msg.payload)
@@ -143,21 +145,30 @@ class TerneoMQTTClimate(ClimateEntity):
             _LOGGER.error("Invalid payload in message: %s", msg.payload)
 
     def _update_hvac_mode_from_temps(self) -> None:
-        """Update hvac_mode and hvac_action based on powerOff, load and mode."""
+        """Update hvac_mode and hvac_action based on powerOff, load, mode, and temperatures."""
         # hvac_mode is based on powerOff, load and mode
         if self._power_off == 1:
             self._attr_hvac_mode = climate.HVACMode.OFF
             self._attr_hvac_action = climate.HVACAction.OFF
         else:
-            # If actively heating (load=1), show HEAT regardless of mode
-            if self._load == 1:
-                self._attr_hvac_mode = climate.HVACMode.HEAT
-            else:
-                # Check if mode is available
-                if self._mode == 0:
-                    self._attr_hvac_mode = climate.HVACMode.AUTO
-                else:
+            # Determine hvac_mode based on temperature comparison
+            if self._floor_temp is not None and self._attr_target_temperature is not None:
+                # If floor temp is below target, we need heating -> HEAT mode
+                if self._floor_temp < self._attr_target_temperature:
                     self._attr_hvac_mode = climate.HVACMode.HEAT
+                else:
+                    # Floor temp reached or exceeded target -> AUTO mode
+                    self._attr_hvac_mode = climate.HVACMode.AUTO
+            else:
+                # Fallback: If actively heating (load=1), show HEAT regardless of mode
+                if self._load == 1:
+                    self._attr_hvac_mode = climate.HVACMode.HEAT
+                else:
+                    # Check if mode is available
+                    if self._mode == 0:
+                        self._attr_hvac_mode = climate.HVACMode.AUTO
+                    else:
+                        self._attr_hvac_mode = climate.HVACMode.HEAT
             
             # hvac_action based on load
             if self._load == 1:
