@@ -51,6 +51,9 @@ async def test_number_async_added_to_hass(mock_mqtt) -> None:
     )
     entity.hass = hass
 
+    # Mock async_get_last_state to return None
+    entity.async_get_last_state = AsyncMock(return_value=None)
+
     await entity.async_added_to_hass()
 
     mock_mqtt.async_subscribe.assert_called_once_with(hass, entity._topic, entity._handle_message, qos=0)

@@ -57,6 +57,10 @@ async def async_setup_entry(
                     unit_of_measurement=None,
                     topic_suffix="load",
                 ),
+                TerneoModeSensor(
+                    client_id=client_id,
+                    prefix=prefix,
+                ),
             ])
     if entities:
         async_add_entities(entities)
@@ -113,3 +117,77 @@ class TerneoSensor(TerneoMQTTEntity, SensorEntity):
     def update_value(self, value: float | int) -> None:
         """Update sensor value."""
         self._attr_native_value = value
+
+
+class TerneoModeSensor(SensorEntity):
+    """Representation of a Terneo mode sensor."""
+
+    def __init__(self, client_id: str, prefix: str) -> None:
+        """Initialize the mode sensor."""
+        self._client_id = client_id
+        self._prefix = prefix
+        self._attr_unique_id = f"{client_id}_mode"
+        self._attr_name = f"Terneo {client_id} Mode"
+        self._attr_native_value = None
+        self._power_off = None
+        self._load = None
+        self._mode = None
+
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, client_id)},
+            manufacturer="Terneo",
+            model="AX",
+            name=f"Terneo {client_id}",
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to MQTT topics when entity is added."""
+        self._unsub_power_off = await mqtt.async_subscribe(
+            self.hass, f"{self._prefix}/{self._client_id}/powerOff", self._handle_message, qos=0
+        )
+        self._unsub_load = await mqtt.async_subscribe(
+            self.hass, f"{self._prefix}/{self._client_id}/load", self._handle_message, qos=0
+        )
+        self._unsub_mode = await mqtt.async_subscribe(
+            self.hass, f"{self._prefix}/{self._client_id}/mode", self._handle_message, qos=0
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Unsubscribe from MQTT topics when entity is removed."""
+        if hasattr(self, '_unsub_power_off'):
+            self._unsub_power_off()
+        if hasattr(self, '_unsub_load'):
+            self._unsub_load()
+        if hasattr(self, '_unsub_mode'):
+            self._unsub_mode()
+
+    @callback
+    def _handle_message(self, msg) -> None:
+        """Handle status message from MQTT."""
+        try:
+            updated = False
+            if msg.topic.endswith("/powerOff"):
+                self._power_off = int(msg.payload)
+                updated = True
+            elif msg.topic.endswith("/load"):
+                self._load = int(msg.payload)
+                updated = True
+            elif msg.topic.endswith("/mode"):
+                self._mode = int(msg.payload)
+                updated = True
+            
+            if updated:
+                self._update_mode()
+                self.async_write_ha_state()
+        except ValueError:
+            pass
+
+    def _update_mode(self) -> None:
+        """Update mode value based on powerOff, load and mode."""
+        if self._power_off == 1:
+            self._attr_native_value = "Off"
+        else:
+            if self._load == 1:
+                self._attr_native_value = "Heat"
+            else:
+                self._attr_native_value = "Idle"

@@ -11,8 +11,9 @@ This integration provides the following entities for each configured Terneo devi
   - Floor temperature
   - Protection temperature
   - Load (current consumption indicator)
+  - Mode (Off/Idle/Heat based on device state)
 - **Binary Sensor Entity**:
-  - Heating state (on/off based on load)
+  - None
 - **Number Entity**:
   - Brightness (0-9 for display brightness)
 - **Select Entity**:
