@@ -20,23 +20,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the TerneoMQ binary sensor platform."""
-    devices = config_entry.data.get("devices", [])
-    prefix = config_entry.options.get("topic_prefix", config_entry.data.get("prefix", "terneo"))
-    entities = []
-    for device in devices:
-        client_id = device["client_id"]
-        entities.append(
-            TerneoBinarySensor(
-                client_id=client_id,
-                prefix=prefix,
-                sensor_type="heating",
-                    name="Heating",
-                    device_class=BinarySensorDeviceClass.HEAT,
-                    topic_suffix="load",
-                )
-            )
-    if entities:
-        async_add_entities(entities)
+    # No binary sensors for now
+    pass
 
 
 class TerneoBinarySensor(TerneoMQTTEntity, BinarySensorEntity):

@@ -1,23 +1,19 @@
 # ha-terneo-mqtt
 
-Home Assistant integration for Terneo thermostats using MQTT.
+Home Assistant integration for Terneo thermostats using MQTT protocol for local control without cloud dependency.
 
 ## Features
 
 This integration provides the following entities for each configured Terneo device:
 
-- **Climate Entity**: Control temperature, heating mode, and power state.
+- **Climate Entity**: Control temperature, heating mode (HEAT/AUTO/OFF), and power state. Automatically displays HEAT mode when device is actively heating.
 - **Sensor Entities**:
   - Floor temperature
   - Protection temperature
-  - Load (current consumption)
-  - Wi-Fi RSSI (HTTP enrichment)
-  - Power consumption (HTTP enrichment)
-  - Energy usage (HTTP enrichment)
-  - Voltage (HTTP enrichment)
-  - Current (HTTP enrichment)
+  - Load (current consumption indicator)
+  - Mode (Off/Idle/Heat based on device state)
 - **Binary Sensor Entity**:
-  - Heating state (on/off based on load)
+  - None
 - **Number Entity**:
   - Brightness (0-9 for display brightness)
 - **Select Entity**:
@@ -32,25 +28,35 @@ This integration provides the following entities for each configured Terneo devi
 ## Configuration
 
 During setup:
-1. Provide comma-separated list of MQTT Client IDs (e.g., `terneo_ax_1B0026,terneo_ax_058009`)
-2. For each device, optionally specify Host/IP and Serial Number for HTTP telemetry enrichment
-3. MQTT broker details (host, port, credentials)
-4. Device prefix (default: "terneo")
+1. Provide comma-separated list of MQTT Client IDs (e.g., `terneo_ax_1С0056,terneo_ax_057019`)
+2. MQTT broker details (host, port, credentials)
+3. Device prefix (default: "terneo")
+### Options
 
-### Optional HTTP Telemetry Enrichment
-
-If host is provided for a device, additional sensors will be created automatically using HTTP API command `{"cmd":4}`.
-
+After setup, you can configure additional options:
+- **Topic prefix**: MQTT topic prefix used by devices
+- **Supports air temperature**: Whether devices publish air temperature sensor data. If disabled, floor temperature will be used as current temperature.
 ## MQTT Topics
 
 The integration subscribes to and publishes on the following topics:
 
-- `{prefix}/{client_id}/protTemp` - Protection temperature
+- `{prefix}/{client_id}/airTemp` - Current air temperature (optional, falls back to floor temperature if not available)
+- `{prefix}/{client_id}/setTemp` - Target temperature (commands)
 - `{prefix}/{client_id}/floorTemp` - Floor temperature
-- `{prefix}/{client_id}/setTemp` - Set temperature (commands)
-- `{prefix}/{client_id}/load` - Load state
+- `{prefix}/{client_id}/protTemp` - Protection temperature
+- `{prefix}/{client_id}/load` - Load state (0=idle, 1=heating)
+- `{prefix}/{client_id}/powerOff` - Power state (0=on, 1=off)
+- `{prefix}/{client_id}/mode` - Operation mode (0=auto/schedule, 1=manual)
 - `{prefix}/{client_id}/bright` - Display brightness
-- `{prefix}/{client_id}/mode` - Operation mode (0=schedule, 1=manual)
+
+## HVAC Mode Logic
+
+The climate entity intelligently manages HVAC modes:
+- **HEAT**: Manual heating mode or when device is actively heating (load=1)
+- **AUTO**: Automatic/schedule mode when not actively heating
+- **OFF**: Device is powered off
+
+When the device starts heating (load changes to 1), the mode automatically switches to HEAT to accurately reflect the current state, regardless of the configured mode.
 
 ## Running Tests
 
