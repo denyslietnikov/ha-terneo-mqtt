@@ -58,5 +58,10 @@ class TerneoMQTTOptionsFlow(config_entries.OptionsFlow):
                     "topic_prefix",
                     default=self._config_entry.options.get("topic_prefix", "terneo")
                 ): str,
+                vol.Optional(
+                    "supports_air_temp",
+                    default=self._config_entry.options.get("supports_air_temp", True),
+                    description="Whether devices support air temperature sensor"
+                ): bool,
             }),
         )
