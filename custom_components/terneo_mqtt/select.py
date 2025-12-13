@@ -30,7 +30,7 @@ async def async_setup_entry(
     entities = []
     for device in devices:
         client_id = device["client_id"]
-        entities.append(TerneoSelect(client_id, prefix, "mode", "Mode", ["schedule", "manual"], "mode"))
+        entities.append(TerneoSelect(client_id, prefix, "mode", "Mode", ["schedule", "manual", "away", "temporary"], "mode"))
 
     async_add_entities(entities)
 
@@ -83,15 +83,17 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Set the option of the entity."""
-        # Map option to payload: schedule -> 0, manual -> 1
-        payload = "0" if option == "schedule" else "1"
+        # Map option to payload: schedule -> 0, manual -> 3, away -> 4, temporary -> 5
+        payload_map = {"schedule": "0", "manual": "3", "away": "4", "temporary": "5"}
+        payload = payload_map.get(option, "0")
         await self.publish_command(payload)
         self._attr_current_option = option
         self.async_write_ha_state()
 
     def parse_value(self, payload: str) -> str:
         """Parse MQTT payload for select."""
-        return "schedule" if payload == "0" else "manual"
+        value_map = {"0": "schedule", "3": "manual", "4": "away", "5": "temporary"}
+        return value_map.get(payload, "schedule")
 
     def update_value(self, value: str) -> None:
         """Update select value."""
