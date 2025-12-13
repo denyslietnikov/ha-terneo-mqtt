@@ -17,7 +17,7 @@ async def test_select_entity_creation() -> None:
         prefix="terneo",
         sensor_type="mode",
         name="Mode",
-        options=["schedule", "manual"],
+        options=["schedule", "manual", "away", "temporary"],
         topic_suffix="mode"
     )
 
@@ -25,7 +25,7 @@ async def test_select_entity_creation() -> None:
     assert entity._topic == "terneo/terneo_ax_1B0026/mode"
     assert entity.unique_id == "terneo_ax_1B0026_mode"
     assert entity.name == "Terneo terneo_ax_1B0026 Mode"
-    assert entity.options == ["schedule", "manual"]
+    assert entity.options == ["schedule", "manual", "away", "temporary"]
 
 
 @pytest.mark.asyncio
@@ -40,7 +40,7 @@ async def test_select_async_added_to_hass(mock_mqtt) -> None:
         prefix="terneo",
         sensor_type="mode",
         name="Mode",
-        options=["schedule", "manual"],
+        options=["schedule", "manual", "away", "temporary"],
         topic_suffix="mode"
     )
     entity.hass = hass
@@ -63,7 +63,7 @@ async def test_select_async_will_remove_from_hass(mock_mqtt) -> None:
         prefix="terneo",
         sensor_type="mode",
         name="Mode",
-        options=["schedule", "manual"],
+        options=["schedule", "manual", "away", "temporary"],
         topic_suffix="mode"
     )
     entity.hass = hass
@@ -85,16 +85,46 @@ async def test_select_async_select_option(mock_async_publish) -> None:
         prefix="terneo",
         sensor_type="mode",
         name="Mode",
-        options=["schedule", "manual"],
+        options=["schedule", "manual", "away", "temporary"],
         topic_suffix="mode"
     )
     entity.hass = hass
-    entity.async_write_ha_state = AsyncMock()
+    entity.async_write_ha_state = MagicMock()
 
+    # Test manual
     await entity.async_select_option("manual")
-
-    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "1", qos=0, retain=True)
+    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "3", qos=0, retain=True)
     assert entity.current_option == "manual"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mocks
+    mock_async_publish.reset_mock()
+    entity.async_write_ha_state.reset_mock()
+
+    # Test schedule
+    await entity.async_select_option("schedule")
+    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "0", qos=0, retain=True)
+    assert entity.current_option == "schedule"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mocks
+    mock_async_publish.reset_mock()
+    entity.async_write_ha_state.reset_mock()
+
+    # Test away
+    await entity.async_select_option("away")
+    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "4", qos=0, retain=True)
+    assert entity.current_option == "away"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mocks
+    mock_async_publish.reset_mock()
+    entity.async_write_ha_state.reset_mock()
+
+    # Test temporary
+    await entity.async_select_option("temporary")
+    mock_async_publish.assert_called_once_with(hass, entity._command_topic, "5", qos=0, retain=True)
+    assert entity.current_option == "temporary"
     entity.async_write_ha_state.assert_called_once()
 
 
@@ -107,12 +137,12 @@ async def test_select_mqtt_message_handling() -> None:
         prefix="terneo",
         sensor_type="mode",
         name="Mode",
-        options=["schedule", "manual"],
+        options=["schedule", "manual", "away", "temporary"],
         topic_suffix="mode"
     )
 
     # Mock write_ha_state
-    entity.async_write_ha_state = AsyncMock()
+    entity.async_write_ha_state = MagicMock()
 
     # Test schedule message
     msg = ReceiveMessage(
@@ -134,7 +164,7 @@ async def test_select_mqtt_message_handling() -> None:
     # Test manual message
     msg = ReceiveMessage(
         topic="terneo/terneo_ax_1B0026/mode",
-        payload="1",
+        payload="3",
         qos=0,
         retain=False,
         subscribed_topic="terneo/terneo_ax_1B0026/mode",
@@ -143,6 +173,40 @@ async def test_select_mqtt_message_handling() -> None:
     entity._handle_message(msg)
 
     assert entity.current_option == "manual"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Test away message
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/mode",
+        payload="4",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/mode",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    assert entity.current_option == "away"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Test temporary message
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/mode",
+        payload="5",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/mode",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    assert entity.current_option == "temporary"
     entity.async_write_ha_state.assert_called_once()
 
 
@@ -159,7 +223,7 @@ async def test_select_restore_state(mock_async_publish) -> None:
             prefix="terneo",
             sensor_type="mode",
             name="Mode",
-            options=["schedule", "manual"],
+            options=["schedule", "manual", "away", "temporary"],
             topic_suffix="mode"
         )
         entity.hass = hass

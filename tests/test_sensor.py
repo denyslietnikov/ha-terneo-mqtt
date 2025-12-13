@@ -5,7 +5,7 @@ import pytest
 from homeassistant.components.mqtt import ReceiveMessage
 from homeassistant.core import HomeAssistant
 
-from custom_components.terneo_mqtt.sensor import TerneoSensor, async_setup_entry
+from custom_components.terneo_mqtt.sensor import TerneoSensor, TerneoStateSensor, async_setup_entry
 
 
 @pytest.mark.asyncio
@@ -95,7 +95,7 @@ async def test_sensor_mqtt_message_handling() -> None:
     )
 
     # Mock write_ha_state
-    entity.async_write_ha_state = AsyncMock()
+    entity.async_write_ha_state = MagicMock()
 
     # Test temperature message
     msg = ReceiveMessage(
@@ -125,7 +125,7 @@ async def test_sensor_mqtt_message_handling() -> None:
         unit_of_measurement=None,
         topic_suffix="load"
     )
-    load_entity.async_write_ha_state = AsyncMock()
+    load_entity.async_write_ha_state = MagicMock()
 
     msg = ReceiveMessage(
         topic="terneo/terneo_ax_1B0026/load",
@@ -156,5 +156,76 @@ async def test_sensor_async_setup_entry() -> None:
     # Verify entities were added
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
-    assert len(entities) == 3  # 3 basic sensor entities per device (floor_temp, prot_temp, load)
-    assert all(isinstance(e, TerneoSensor) for e in entities)
+    assert len(entities) == 4  # 4 sensor entities per device (floor_temp, prot_temp, load, mode)
+    assert sum(1 for e in entities if isinstance(e, TerneoSensor)) == 3
+    assert sum(1 for e in entities if hasattr(e, '_update_mode')) == 1  # TerneoModeSensor
+
+
+@pytest.mark.asyncio
+async def test_state_sensor_entity_creation() -> None:
+    """Test state sensor entity initialization."""
+    entity = TerneoStateSensor(client_id="terneo_ax_1B0026", prefix="terneo")
+
+    assert entity._client_id == "terneo_ax_1B0026"
+    assert entity.unique_id == "terneo_ax_1B0026_state"
+    assert entity.name == "Terneo terneo_ax_1B0026 State"
+
+
+@pytest.mark.asyncio
+@patch('custom_components.terneo_mqtt.sensor.mqtt')
+async def test_state_sensor_mqtt_message_handling(mock_mqtt) -> None:
+    """Test MQTT message handling for state sensor."""
+    hass = MagicMock()
+    entity = TerneoStateSensor(client_id="terneo_ax_1B0026", prefix="terneo")
+    entity.hass = hass
+
+    # Mock write_ha_state
+    entity.async_write_ha_state = MagicMock()
+
+    # Test powerOff message (off)
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/powerOff",
+        payload="1",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/powerOff",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    assert entity.native_value == "Off"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Test powerOff message (on), load=0 -> Idle
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/powerOff",
+        payload="0",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/powerOff",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    assert entity.native_value == "Idle"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
+    # Test load message (heating on) -> Heat
+    msg = ReceiveMessage(
+        topic="terneo/terneo_ax_1B0026/load",
+        payload="1",
+        qos=0,
+        retain=False,
+        subscribed_topic="terneo/terneo_ax_1B0026/load",
+        timestamp=1234567890
+    )
+    entity._handle_message(msg)
+
+    assert entity.native_value == "Heat"
+    entity.async_write_ha_state.assert_called_once()
