@@ -27,6 +27,7 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
         sensor_type: str,
         name: str,
         topic_suffix: str,
+        track_availability: bool = True,
     ) -> None:
         """Initialize the base entity."""
         super().__init__()
@@ -39,8 +40,9 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
         self._name = f"Terneo {client_id} {name}"
         self._unique_id = f"{client_id}_{sensor_type}"
         self._last_update = None
-        self._attr_available = False
+        self._attr_available = True  # Always available for settings
         self._unavailable_timer = None
+        self.track_availability = track_availability
 
     @abstractmethod
     def parse_value(self, payload: str) -> Any:
@@ -60,7 +62,8 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
     async def async_added_to_hass(self) -> None:
         """Set up availability timer when entity is added."""
         await super().async_added_to_hass()
-        self._unavailable_timer = async_track_time_interval(self.hass, self._check_availability, timedelta(minutes=5))
+        if self.track_availability:
+            self._unavailable_timer = async_track_time_interval(self.hass, self._check_availability, timedelta(minutes=5))
 
     async def async_will_remove_from_hass(self) -> None:
         """Cancel availability timer when entity is removed."""
@@ -72,15 +75,17 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
     def _check_availability(self, now=None) -> None:
         """Check if entity should be marked unavailable."""
         if self._last_update is None or time.time() - self._last_update > 300:
-            self._attr_available = False
-            self.async_write_ha_state()
+            if self.track_availability:
+                self._attr_available = False
+                self.async_write_ha_state()
 
     @callback
     def _handle_message(self, msg: ReceiveMessage) -> None:
         """Handle incoming MQTT message."""
         _LOGGER.debug("Received MQTT message for %s: %s %s", self._sensor_type, msg.topic, msg.payload)
         self._last_update = time.time()
-        self._attr_available = True
+        if self.track_availability:
+            self._attr_available = True
         try:
             value = self.parse_value(msg.payload)
             self.update_value(value)
