@@ -1,0 +1,67 @@
+name: Release to Main
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge develop into main
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout main
+          git merge develop --no-ff -m "Merge develop into main for release"
+
+      - name: Bump version
+        run: |
+          current_version=$(jq -r '.version' custom_components/terneo/manifest.json)
+          echo "Current version: $current_version"
+
+          # Parse version
+          IFS='.' read -r major minor patch <<< "$current_version"
+
+          case ${{ inputs.bump_type }} in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+          esac
+
+          new_version="$major.$minor.$patch"
+          echo "New version: $new_version"
+
+          # Update manifest.json
+          jq --arg version "$new_version" '.version = $version' custom_components/terneo/manifest.json > tmp.json && mv tmp.json custom_components/terneo/manifest.json
+
+      - name: Create GitHub Release
+        run: |
+          version=$(jq -r '.version' custom_components/terneo/manifest.json)
+          gh release create "v$version" --title "Release v$version" --notes "Automated release" --target main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
