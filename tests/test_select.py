@@ -95,7 +95,7 @@ async def test_select_async_select_option(mock_async_publish) -> None:
     # Test manual
     await entity.async_select_option("manual")
     mock_async_publish.assert_called_once_with(
-        hass, entity._command_topic, "3", qos=0, retain=True
+        hass, entity._command_topic, "3", qos=0, retain=False
     )
     assert entity.current_option == "manual"
     entity.async_write_ha_state.assert_called_once()
@@ -107,7 +107,7 @@ async def test_select_async_select_option(mock_async_publish) -> None:
     # Test schedule
     await entity.async_select_option("schedule")
     mock_async_publish.assert_called_once_with(
-        hass, entity._command_topic, "0", qos=0, retain=True
+        hass, entity._command_topic, "0", qos=0, retain=False
     )
     assert entity.current_option == "schedule"
     entity.async_write_ha_state.assert_called_once()
@@ -119,7 +119,7 @@ async def test_select_async_select_option(mock_async_publish) -> None:
     # Test away
     await entity.async_select_option("away")
     mock_async_publish.assert_called_once_with(
-        hass, entity._command_topic, "4", qos=0, retain=True
+        hass, entity._command_topic, "4", qos=0, retain=False
     )
     assert entity.current_option == "away"
     entity.async_write_ha_state.assert_called_once()
@@ -131,7 +131,7 @@ async def test_select_async_select_option(mock_async_publish) -> None:
     # Test temporary
     await entity.async_select_option("temporary")
     mock_async_publish.assert_called_once_with(
-        hass, entity._command_topic, "5", qos=0, retain=True
+        hass, entity._command_topic, "5", qos=0, retain=False
     )
     assert entity.current_option == "temporary"
     entity.async_write_ha_state.assert_called_once()

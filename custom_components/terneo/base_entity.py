@@ -64,7 +64,7 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
             self._command_topic,
         )
         await mqtt.async_publish(
-            self.hass, self._command_topic, payload, qos=0, retain=True
+            self.hass, self._command_topic, payload, qos=0, retain=False
         )
 
     async def async_added_to_hass(self) -> None:

@@ -108,7 +108,7 @@ async def test_number_set_native_value(mock_async_publish) -> None:
     await entity.async_set_native_value(5.0)
 
     mock_async_publish.assert_called_once_with(
-        hass, entity._command_topic, "5", qos=0, retain=True
+        hass, entity._command_topic, "5", qos=0, retain=False
     )
     assert entity.native_value == 5.0
     entity.async_write_ha_state.assert_called_once()
