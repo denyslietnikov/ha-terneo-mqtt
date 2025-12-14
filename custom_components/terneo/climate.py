@@ -27,10 +27,13 @@ async def async_setup_entry(
         "topic_prefix", config_entry.data.get("prefix", "terneo")
     )
     supports_air_temp = config_entry.options.get("supports_air_temp", True)
+    model = config_entry.options.get("model", "AX")
     entities = []
     for device in devices:
         client_id = device["client_id"]
-        entities.append(TerneoMQTTClimate(hass, client_id, prefix, supports_air_temp))
+        entities.append(
+            TerneoMQTTClimate(hass, client_id, prefix, supports_air_temp, model)
+        )
     if entities:
         async_add_entities(entities)
 
@@ -61,12 +64,14 @@ class TerneoMQTTClimate(ClimateEntity):
         client_id: str,
         topic_prefix: str,
         supports_air_temp: bool = True,
+        model: str = "AX",
         state_topic: str = None,
         command_topic: str = None,
     ) -> None:
         """Initialize the climate device."""
         self.hass = hass
         self._client_id = client_id
+        self._model = model
         self._topic_prefix = topic_prefix
         self._supports_air_temp = supports_air_temp
         # Status topics
@@ -323,5 +328,5 @@ class TerneoMQTTClimate(ClimateEntity):
             "identifiers": {(DOMAIN, self._client_id)},
             "name": f"Terneo {self._client_id}",
             "manufacturer": "Terneo",
-            "model": "AX",
+            "model": self._model,
         }
