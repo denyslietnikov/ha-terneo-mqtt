@@ -55,6 +55,7 @@ class TerneoBinarySensor(TerneoMQTTEntity, BinarySensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topic when entity is added."""
+        await super().async_added_to_hass()
         self._unsubscribe = await mqtt.async_subscribe(
             self.hass, self._topic, self._handle_message, qos=0
         )
