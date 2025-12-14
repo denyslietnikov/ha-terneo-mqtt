@@ -32,6 +32,7 @@ During setup:
 2. MQTT broker details (host, port, credentials)
 3. Device prefix (default: "terneo")
 4. Thermostat model (AX or SX)
+5. Rated power of heating element in watts (0 = disabled)
 ### Options
 
 After setup, you can configure additional options:

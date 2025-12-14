@@ -26,7 +26,6 @@ class TerneoMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data = {
                 "prefix": user_input.get("topic_prefix", "terneo"),
                 "model": user_input.get("model", "AX"),
-                "rated_power_w": user_input.get("rated_power_w", 0),
                 "devices": [{"client_id": cid} for cid in devices],
             }
             return self.async_create_entry(title="TerneoMQ", data=data)
@@ -47,13 +46,8 @@ class TerneoMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(
                         "model",
                         default="AX",
-                        description="Thermostat model",
-                    ): vol.In({"AX": "AX", "SX": "SX"}),
-                    vol.Optional(
-                        "rated_power_w",
-                        default=0,
-                        description="Rated power of heating element in watts (0 = disabled)",
-                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=10000)),
+                        description="Thermostat model (AX or SX)",
+                    ): vol.In(["AX", "SX"]),
                 }
             ),
         )
@@ -75,9 +69,9 @@ class TerneoMQTTOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
-            # Reload integration to apply new options
+            result = self.async_create_entry(title="", data=user_input)
             await self.hass.config_entries.async_reload(self._config_entry.entry_id)
-            return self.async_create_entry(title="", data=user_input)
+            return result
 
         return self.async_show_form(
             step_id="init",
@@ -90,17 +84,19 @@ class TerneoMQTTOptionsFlow(config_entries.OptionsFlow):
                         ),
                     ): str,
                     vol.Optional(
+                        "model",
+                        default=self._config_entry.options.get(
+                            "model", self._config_entry.data.get("model", "AX")
+                        ),
+                        description="Thermostat model (AX or SX)",
+                    ): vol.In(["AX", "SX"]),
+                    vol.Optional(
                         "supports_air_temp",
                         default=self._config_entry.options.get(
                             "supports_air_temp", True
                         ),
                         description="Whether devices support air temperature sensor",
                     ): bool,
-                    vol.Optional(
-                        "model",
-                        default=self._config_entry.options.get("model", "AX"),
-                        description="Thermostat model",
-                    ): vol.In({"AX": "AX", "SX": "SX"}),
                     vol.Optional(
                         "rated_power_w",
                         default=self._config_entry.options.get("rated_power_w", 0),

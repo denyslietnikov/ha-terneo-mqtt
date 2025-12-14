@@ -31,6 +31,7 @@ async def test_config_flow_user() -> None:
     assert result["data"] == {
         "prefix": "terneo",
         "model": "AX",
+        "rated_power_w": 0,
         "devices": [{"client_id": "terneo_ax_1B0026"}],
     }
 
@@ -54,6 +55,7 @@ async def test_config_flow_full() -> None:
     assert result["data"] == {
         "prefix": "terneo",
         "model": "AX",
+        "rated_power_w": 0,
         "devices": [{"client_id": "terneo_ax_1"}, {"client_id": "terneo_ax_2"}],
     }
 
@@ -77,7 +79,9 @@ async def test_options_flow() -> None:
     assert result["step_id"] == "init"
 
     # Test with valid data
-    result = await flow.async_step_init({"topic_prefix": "new_terneo"})
+    result = await flow.async_step_init(
+        {"topic_prefix": "new_terneo", "rated_power_w": 1500}
+    )
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
-    assert result["data"] == {"topic_prefix": "new_terneo"}
+    assert result["data"] == {"topic_prefix": "new_terneo", "rated_power_w": 1500}
