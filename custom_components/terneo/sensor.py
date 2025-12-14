@@ -28,7 +28,7 @@ async def async_setup_entry(
         "topic_prefix", config_entry.data.get("prefix", "terneo")
     )
     rated_power_w = config_entry.options.get("rated_power_w", 0)
-    model = config_entry.options.get("model", "AX")
+    model = config_entry.options.get("model", config_entry.data.get("model", "AX"))
     entities = []
     for device in devices:
         client_id = device["client_id"]

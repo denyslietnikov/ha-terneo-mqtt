@@ -24,7 +24,7 @@ async def async_setup_entry(
     prefix = config_entry.options.get(
         "topic_prefix", config_entry.data.get("prefix", "terneo")
     )
-    model = config_entry.options.get("model", "AX")
+    model = config_entry.options.get("model", config_entry.data.get("model", "AX"))
 
     entities = []
     for device in devices:

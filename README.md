@@ -31,6 +31,7 @@ During setup:
 1. Provide comma-separated list of MQTT Client IDs (e.g., `terneo_ax_1С0056,terneo_ax_057019`)
 2. MQTT broker details (host, port, credentials)
 3. Device prefix (default: "terneo")
+4. Thermostat model (AX or SX)
 ### Options
 
 After setup, you can configure additional options:
