@@ -6,7 +6,7 @@ Home Assistant integration for Terneo thermostats using MQTT protocol for local 
 
 This integration provides the following entities for each configured Terneo device:
 
-- **Climate Entity**: Control temperature, heating mode (HEAT/AUTO/OFF), and power state. Automatically displays HEAT mode when device is actively heating.
+- **Climate Entity**: Control temperature, heating mode (HEAT/AUTO/OFF), and power state.
 - **Sensor Entities**:
   - Floor temperature
   - Protection temperature
@@ -29,12 +29,14 @@ This integration provides the following entities for each configured Terneo devi
 
 During setup:
 1. Provide comma-separated list of MQTT Client IDs (e.g., `terneo_ax_1С0056,terneo_ax_057019`)
-2. MQTT broker details (host, port, credentials)
-3. Device prefix (default: "terneo")
+2. Device prefix (default: "terneo")
+3. Thermostat model (AX or SX)
+4. Rated power of heating element in watts (0 = disabled)
 ### Options
 
 After setup, you can configure additional options:
 - **Topic prefix**: MQTT topic prefix used by devices
+- **Model**: Thermostat model (AX or SX)
 - **Rated power (W)**: Rated power of the heating element in watts. When set above 0, enables power and energy sensors for HA Energy dashboard integration. Set to 0 to disable energy monitoring.
 ## MQTT Topics
 

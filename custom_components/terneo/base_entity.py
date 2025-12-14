@@ -26,6 +26,7 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
         sensor_type: str,
         name: str,
         topic_suffix: str,
+        model: str = "AX",
         track_availability: bool = True,
     ) -> None:
         """Initialize the base entity."""
@@ -42,6 +43,7 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
         self._attr_available = True  # Always available for settings
         self._unavailable_timer = None
         self.track_availability = track_availability
+        self._model = model
 
     @abstractmethod
     def parse_value(self, payload: str) -> Any:
