@@ -25,6 +25,7 @@ class TerneoMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             data = {
                 "prefix": user_input.get("topic_prefix", "terneo"),
+                "model": user_input.get("model", "AX"),
                 "devices": [{"client_id": cid} for cid in devices],
             }
             return self.async_create_entry(title="TerneoMQ", data=data)
@@ -42,6 +43,11 @@ class TerneoMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         default="terneo",
                         description="MQTT topic prefix used by the devices",
                     ): str,
+                    vol.Optional(
+                        "model",
+                        default="AX",
+                        description="Thermostat model",
+                    ): vol.In({"AX": "AX", "SX": "SX"}),
                 }
             ),
         )
@@ -63,6 +69,8 @@ class TerneoMQTTOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
+            # Reload integration to apply new options
+            await self.hass.config_entries.async_reload(self._config_entry.entry_id)
             return self.async_create_entry(title="", data=user_input)
 
         return self.async_show_form(
@@ -83,10 +91,10 @@ class TerneoMQTTOptionsFlow(config_entries.OptionsFlow):
                         description="Whether devices support air temperature sensor",
                     ): bool,
                     vol.Optional(
-                        "rated_power_w",
-                        default=self._config_entry.options.get("rated_power_w", 0),
-                        description="Rated power of heating element in watts (0 = disabled)",
-                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=10000)),
+                        "model",
+                        default=self._config_entry.options.get("model", "AX"),
+                        description="Thermostat model",
+                    ): vol.In({"AX": "AX", "SX": "SX"}),
                 }
             ),
         )

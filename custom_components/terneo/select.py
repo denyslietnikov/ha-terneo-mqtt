@@ -24,6 +24,7 @@ async def async_setup_entry(
     prefix = config_entry.options.get(
         "topic_prefix", config_entry.data.get("prefix", "terneo")
     )
+    model = config_entry.options.get("model", config_entry.data.get("model", "AX"))
 
     entities = []
     for device in devices:
@@ -36,6 +37,7 @@ async def async_setup_entry(
                 "Mode",
                 ["schedule", "manual", "away", "temporary"],
                 "mode",
+                model,
             )
         )
 
@@ -53,6 +55,7 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
         name: str,
         options: list[str],
         topic_suffix: str,
+        model: str = "AX",
     ) -> None:
         """Initialize the select entity."""
         super().__init__(
@@ -62,6 +65,7 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
             sensor_type,
             name,
             topic_suffix,
+            model,
             track_availability=False,
         )  # hass will be set later
         self._attr_unique_id = f"{client_id}_{sensor_type}"
@@ -73,7 +77,7 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, client_id)},
             manufacturer="Terneo",
-            model="AX",  # Assuming AX, can be made configurable later
+            model=self._model,
             name=f"Terneo {client_id}",
         )
 

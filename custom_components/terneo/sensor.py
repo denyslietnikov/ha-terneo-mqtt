@@ -28,6 +28,7 @@ async def async_setup_entry(
         "topic_prefix", config_entry.data.get("prefix", "terneo")
     )
     rated_power_w = config_entry.options.get("rated_power_w", 0)
+    model = config_entry.options.get("model", config_entry.data.get("model", "AX"))
     entities = []
     for device in devices:
         client_id = device["client_id"]
@@ -42,6 +43,7 @@ async def async_setup_entry(
                     state_class=SensorStateClass.MEASUREMENT,
                     unit_of_measurement="°C",
                     topic_suffix="floorTemp",
+                    model=model,
                 ),
                 TerneoSensor(
                     client_id=client_id,
@@ -52,6 +54,7 @@ async def async_setup_entry(
                     state_class=SensorStateClass.MEASUREMENT,
                     unit_of_measurement="°C",
                     topic_suffix="protTemp",
+                    model=model,
                 ),
                 TerneoSensor(
                     client_id=client_id,
@@ -62,10 +65,12 @@ async def async_setup_entry(
                     state_class=SensorStateClass.MEASUREMENT,
                     unit_of_measurement=None,
                     topic_suffix="load",
+                    model=model,
                 ),
                 TerneoStateSensor(
                     client_id=client_id,
                     prefix=prefix,
+                    model=model,
                 ),
             ]
         )
@@ -77,11 +82,13 @@ async def async_setup_entry(
                         client_id=client_id,
                         prefix=prefix,
                         rated_power_w=rated_power_w,
+                        model=model,
                     ),
                     TerneoEnergySensor(
                         client_id=client_id,
                         prefix=prefix,
                         rated_power_w=rated_power_w,
+                        model=model,
                     ),
                 ]
             )
@@ -102,10 +109,11 @@ class TerneoSensor(TerneoMQTTEntity, SensorEntity):
         state_class: SensorStateClass | None,
         unit_of_measurement: str | None,
         topic_suffix: str,
+        model: str = "AX",
     ) -> None:
         """Initialize the sensor."""
         super().__init__(
-            None, client_id, prefix, sensor_type, name, topic_suffix
+            None, client_id, prefix, sensor_type, name, topic_suffix, model
         )  # hass will be set later
         self._attr_unique_id = f"{client_id}_{sensor_type}"
         self._attr_name = f"Terneo {client_id} {name}"
@@ -117,7 +125,7 @@ class TerneoSensor(TerneoMQTTEntity, SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, client_id)},
             manufacturer="Terneo",
-            model="AX",  # Assuming AX, can be made configurable later
+            model=self._model,
             name=f"Terneo {client_id}",
         )
 
@@ -149,10 +157,11 @@ class TerneoSensor(TerneoMQTTEntity, SensorEntity):
 class TerneoStateSensor(SensorEntity):
     """Representation of a Terneo state sensor."""
 
-    def __init__(self, client_id: str, prefix: str) -> None:
+    def __init__(self, client_id: str, prefix: str, model: str = "AX") -> None:
         """Initialize the mode sensor."""
         self._client_id = client_id
         self._prefix = prefix
+        self._model = model
         self._attr_unique_id = f"{client_id}_state"
         self._attr_name = f"Terneo {client_id} State"
         self._attr_native_value = None
@@ -163,7 +172,7 @@ class TerneoStateSensor(SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, client_id)},
             manufacturer="Terneo",
-            model="AX",
+            model=self._model,
             name=f"Terneo {client_id}",
         )
 
@@ -236,11 +245,14 @@ class TerneoPowerSensor(SensorEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = "W"
 
-    def __init__(self, client_id: str, prefix: str, rated_power_w: int) -> None:
+    def __init__(
+        self, client_id: str, prefix: str, rated_power_w: int, model: str = "AX"
+    ) -> None:
         """Initialize the power sensor."""
         self._client_id = client_id
         self._topic_prefix = prefix
         self._rated_power_w = rated_power_w
+        self._model = model
         self._load_topic = f"{prefix}/{client_id}/load"
         self._load = None
 
@@ -252,7 +264,7 @@ class TerneoPowerSensor(SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, client_id)},
             manufacturer="Terneo",
-            model="AX",
+            model=self._model,
             name=f"Terneo {client_id}",
         )
 
@@ -281,11 +293,14 @@ class TerneoEnergySensor(SensorEntity):
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = "kWh"
 
-    def __init__(self, client_id: str, prefix: str, rated_power_w: int) -> None:
+    def __init__(
+        self, client_id: str, prefix: str, rated_power_w: int, model: str = "AX"
+    ) -> None:
         """Initialize the energy sensor."""
         self._client_id = client_id
         self._topic_prefix = prefix
         self._rated_power_w = rated_power_w
+        self._model = model
         self._load_topic = f"{prefix}/{client_id}/load"
         self._load = None
         self._last_update = time.time()
@@ -299,7 +314,7 @@ class TerneoEnergySensor(SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, client_id)},
             manufacturer="Terneo",
-            model="AX",
+            model=self._model,
             name=f"Terneo {client_id}",
         )
 

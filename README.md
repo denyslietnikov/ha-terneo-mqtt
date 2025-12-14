@@ -31,10 +31,12 @@ During setup:
 1. Provide comma-separated list of MQTT Client IDs (e.g., `terneo_ax_1С0056,terneo_ax_057019`)
 2. MQTT broker details (host, port, credentials)
 3. Device prefix (default: "terneo")
+4. Thermostat model (AX or SX)
 ### Options
 
 After setup, you can configure additional options:
 - **Topic prefix**: MQTT topic prefix used by devices
+- **Model**: Thermostat model (AX or SX)
 - **Rated power (W)**: Rated power of the heating element in watts. When set above 0, enables power and energy sensors for HA Energy dashboard integration. Set to 0 to disable energy monitoring.
 ## MQTT Topics
 
