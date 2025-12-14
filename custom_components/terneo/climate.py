@@ -243,17 +243,17 @@ class TerneoMQTTClimate(ClimateEntity):
             if self._attr_hvac_mode == climate.HVACMode.OFF:
                 _LOGGER.debug("Switching to HEAT mode for temperature setting")
                 await mqtt.async_publish(
-                    self.hass, self._mode_cmd_topic, "3", retain=True
+                    self.hass, self._mode_cmd_topic, "3", retain=False
                 )
                 await mqtt.async_publish(
-                    self.hass, self._power_off_cmd_topic, "0", retain=True
+                    self.hass, self._power_off_cmd_topic, "0", retain=False
                 )
                 self._power_off = 0  # Update local state
                 self._mode = 3  # Update local state
                 self._load = 1  # Optimistically assume heating starts
                 self._attr_hvac_mode = climate.HVACMode.HEAT
             await mqtt.async_publish(
-                self.hass, self._set_temp_cmd_topic, str(temperature), retain=True
+                self.hass, self._set_temp_cmd_topic, str(temperature), retain=False
             )
             # Optimistically update the state
             self._attr_target_temperature = temperature
@@ -280,9 +280,9 @@ class TerneoMQTTClimate(ClimateEntity):
         _LOGGER.debug("Setting HVAC mode to %s", hvac_mode)
         if hvac_mode == climate.HVACMode.HEAT:
             # Set to manual mode (3) and turn on
-            await mqtt.async_publish(self.hass, self._mode_cmd_topic, "3", retain=True)
+            await mqtt.async_publish(self.hass, self._mode_cmd_topic, "3", retain=False)
             await mqtt.async_publish(
-                self.hass, self._power_off_cmd_topic, "0", retain=True
+                self.hass, self._power_off_cmd_topic, "0", retain=False
             )
             # Set optimistic mode for 60 seconds
             self._optimistic_mode = climate.HVACMode.HEAT
@@ -294,7 +294,7 @@ class TerneoMQTTClimate(ClimateEntity):
         elif hvac_mode == climate.HVACMode.AUTO:
             # Turn on (leave current mode as is)
             await mqtt.async_publish(
-                self.hass, self._power_off_cmd_topic, "0", retain=True
+                self.hass, self._power_off_cmd_topic, "0", retain=False
             )
             # Reset optimistic mode
             if self._optimistic_task:
@@ -303,7 +303,7 @@ class TerneoMQTTClimate(ClimateEntity):
             self._optimistic_mode = None
         elif hvac_mode == climate.HVACMode.OFF:
             await mqtt.async_publish(
-                self.hass, self._power_off_cmd_topic, "1", retain=True
+                self.hass, self._power_off_cmd_topic, "1", retain=False
             )
             # Reset optimistic mode
             if self._optimistic_task:

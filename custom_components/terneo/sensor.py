@@ -11,7 +11,9 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
 
 from .base_entity import TerneoMQTTEntity
 from .const import DOMAIN
@@ -27,7 +29,9 @@ async def async_setup_entry(
     prefix = config_entry.options.get(
         "topic_prefix", config_entry.data.get("prefix", "terneo")
     )
-    rated_power_w = config_entry.options.get("rated_power_w", 0)
+    rated_power_w = config_entry.options.get(
+        "rated_power_w", config_entry.data.get("rated_power_w", 0)
+    )
     model = config_entry.options.get("model", config_entry.data.get("model", "AX"))
     entities = []
     for device in devices:
@@ -131,6 +135,7 @@ class TerneoSensor(TerneoMQTTEntity, SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topic when entity is added."""
+        await super().async_added_to_hass()
         self._unsubscribe = await mqtt.async_subscribe(
             self.hass, self._topic, self._handle_message, qos=0
         )
@@ -286,7 +291,7 @@ class TerneoPowerSensor(SensorEntity):
             pass
 
 
-class TerneoEnergySensor(SensorEntity):
+class TerneoEnergySensor(RestoreEntity, SensorEntity):
     """Representation of a Terneo energy sensor."""
 
     _attr_device_class = SensorDeviceClass.ENERGY
@@ -320,6 +325,13 @@ class TerneoEnergySensor(SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topics when entity is added."""
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state and last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+            try:
+                self._energy_kwh = float(last_state.state)
+            except ValueError:
+                self._energy_kwh = 0.0
         self._unsub_load = await mqtt.async_subscribe(
             self.hass, self._load_topic, self._handle_load_message, 0
         )

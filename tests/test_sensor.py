@@ -329,6 +329,7 @@ async def test_energy_sensor(mock_mqtt) -> None:
     entity.hass = hass
     entity.platform = MagicMock()
     entity.async_write_ha_state = MagicMock()
+    entity.async_get_last_state = AsyncMock(return_value=None)
 
     await entity.async_added_to_hass()
 

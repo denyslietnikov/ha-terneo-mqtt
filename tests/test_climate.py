@@ -369,10 +369,10 @@ async def test_climate_async_set_hvac_mode_heat_from_off(mock_mqtt) -> None:
     # Should publish mode=3 and powerOff=0 to turn on the device
     assert mock_mqtt.async_publish.call_count == 2
     mock_mqtt.async_publish.assert_any_call(
-        hass, entity._mode_cmd_topic, "3", retain=True
+        hass, entity._mode_cmd_topic, "3", retain=False
     )
     mock_mqtt.async_publish.assert_any_call(
-        hass, entity._power_off_cmd_topic, "0", retain=True
+        hass, entity._power_off_cmd_topic, "0", retain=False
     )
     assert entity.hvac_mode == "heat"
     entity.async_write_ha_state.assert_called_once()
@@ -395,7 +395,7 @@ async def test_climate_async_set_hvac_mode_auto_from_off(mock_mqtt) -> None:
     # Should publish powerOff=0 (leave mode as is)
     assert mock_mqtt.async_publish.call_count == 1
     mock_mqtt.async_publish.assert_called_once_with(
-        hass, entity._power_off_cmd_topic, "0", retain=True
+        hass, entity._power_off_cmd_topic, "0", retain=False
     )
     assert entity.hvac_mode == "auto"
     entity.async_write_ha_state.assert_called_once()
@@ -418,7 +418,7 @@ async def test_climate_async_set_temperature(mock_mqtt) -> None:
     # Should publish setTemp
     assert mock_mqtt.async_publish.call_count == 1
     mock_mqtt.async_publish.assert_called_once_with(
-        hass, entity._set_temp_cmd_topic, "25.0", retain=True
+        hass, entity._set_temp_cmd_topic, "25.0", retain=False
     )
     assert entity._attr_target_temperature == 25.0
     entity.async_write_ha_state.assert_called_once()
@@ -441,13 +441,13 @@ async def test_climate_async_set_temperature_from_off(mock_mqtt) -> None:
     # Should publish mode=3, powerOff=0, and setTemp
     assert mock_mqtt.async_publish.call_count == 3
     mock_mqtt.async_publish.assert_any_call(
-        hass, entity._mode_cmd_topic, "3", retain=True
+        hass, entity._mode_cmd_topic, "3", retain=False
     )
     mock_mqtt.async_publish.assert_any_call(
-        hass, entity._power_off_cmd_topic, "0", retain=True
+        hass, entity._power_off_cmd_topic, "0", retain=False
     )
     mock_mqtt.async_publish.assert_any_call(
-        hass, entity._set_temp_cmd_topic, "25.0", retain=True
+        hass, entity._set_temp_cmd_topic, "25.0", retain=False
     )
     assert entity._attr_target_temperature == 25.0
     assert entity._attr_hvac_mode == "heat"
