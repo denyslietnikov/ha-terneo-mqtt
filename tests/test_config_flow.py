@@ -1,6 +1,6 @@
 """Test TerneoMQ config flow."""
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
@@ -68,7 +68,6 @@ async def test_options_flow() -> None:
     config_entry.entry_id = "test_entry_id"
     config_entry.options = {}
     hass.config_entries.async_get_known_entry.return_value = config_entry
-    hass.config_entries.async_reload = AsyncMock()
     flow = TerneoMQTTOptionsFlow(config_entry)
     flow.handler = "test_entry_id"  # Ensure handler is set
     flow.hass = hass
