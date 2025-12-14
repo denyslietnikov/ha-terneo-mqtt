@@ -35,10 +35,11 @@ class TerneoBinarySensor(TerneoMQTTEntity, BinarySensorEntity):
         name: str,
         device_class: BinarySensorDeviceClass | None,
         topic_suffix: str,
+        model: str = "AX",
     ) -> None:
         """Initialize the binary sensor."""
         super().__init__(
-            None, client_id, prefix, sensor_type, name, topic_suffix
+            None, client_id, prefix, sensor_type, name, topic_suffix, model
         )  # hass will be set later
         self._attr_unique_id = f"{client_id}_{sensor_type}"
         self._attr_name = f"Terneo {client_id} {name}"
@@ -48,7 +49,7 @@ class TerneoBinarySensor(TerneoMQTTEntity, BinarySensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, client_id)},
             manufacturer="Terneo",
-            model="AX",  # Assuming AX, can be made configurable later
+            model=self._model,
             name=f"Terneo {client_id}",
         )
 

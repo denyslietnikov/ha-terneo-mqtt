@@ -35,6 +35,7 @@ During setup:
 
 After setup, you can configure additional options:
 - **Topic prefix**: MQTT topic prefix used by devices
+- **Model**: Thermostat model (AX or SX)
 - **Rated power (W)**: Rated power of the heating element in watts. When set above 0, enables power and energy sensors for HA Energy dashboard integration. Set to 0 to disable energy monitoring.
 ## MQTT Topics
 
