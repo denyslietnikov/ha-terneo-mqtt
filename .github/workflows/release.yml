@@ -1,0 +1,113 @@
+name: Release to Main
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge develop into main
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout main
+          git merge develop --no-ff --strategy-option theirs -m "Merge develop into main for release"
+
+      - name: Push merge commit to main
+        run: |
+          git push origin main
+
+      - name: Bump version
+        run: |
+          current_version=$(jq -r '.version' custom_components/terneo/manifest.json)
+          echo "Current version: $current_version"
+
+          # Parse version
+          IFS='.' read -r major minor patch <<< "$current_version"
+
+          case ${{ inputs.bump_type }} in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+          esac
+
+          new_version="$major.$minor.$patch"
+          echo "New version: $new_version"
+
+          # Update manifest.json
+          jq --arg version "$new_version" '.version = $version' custom_components/terneo/manifest.json > tmp.json && mv tmp.json custom_components/terneo/manifest.json
+          git add custom_components/terneo/manifest.json
+          git commit -m "Bump version to $new_version"
+          git push origin main
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(jq -r '.version' custom_components/terneo/manifest.json)
+          tag="v$version"
+
+          # Get previous tag (if any)
+          previous_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          # Prefer GitHub's release notes generator (nice formatting)
+          if [ -n "$previous_tag" ]; then
+            notes_json=$(gh api -X POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="$tag" \
+              -f target_commitish="main" \
+              -f previous_tag_name="$previous_tag" \
+              || true)
+          else
+            notes_json=$(gh api -X POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="$tag" \
+              -f target_commitish="main" \
+              || true)
+          fi
+
+          if [ -n "$notes_json" ]; then
+            notes=$(echo "$notes_json" | jq -r '.body')
+          else
+            # Fallback: simple changelog (proper newlines)
+            if [ -n "$previous_tag" ]; then
+              changelog=$(git log --oneline --no-merges --pretty=format:"- %s" "$previous_tag"..HEAD)
+              notes=$(printf "## Changes since %s\n\n%s\n" "$previous_tag" "$changelog")
+            else
+              changelog=$(git log --oneline --no-merges --pretty=format:"- %s")
+              notes=$(printf "## Changes\n\n%s\n" "$changelog")
+            fi
+          fi
+
+          gh release create "$tag" \
+            --title "Release $tag" \
+            --notes "$notes" \
+            --target main
