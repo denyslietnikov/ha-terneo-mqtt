@@ -104,7 +104,10 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
     def parse_value(self, payload: str) -> str:
         """Parse MQTT payload for select."""
         value_map = {"0": "schedule", "3": "manual", "4": "away", "5": "temporary"}
-        return value_map.get(payload, "schedule")
+        if isinstance(payload, bytes):
+            payload = payload.decode(errors="ignore")
+        payload_str = str(payload)
+        return value_map.get(payload_str, "schedule")
 
     def update_value(self, value: str) -> None:
         """Update select value."""
