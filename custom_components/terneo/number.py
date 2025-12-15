@@ -71,9 +71,7 @@ class TerneoNumber(TerneoMQTTEntity, NumberEntity):
             track_availability=False,
         )
         self._topic_suffix = topic_suffix
-        self._topic = (
-            f"{coordinator.topic_prefix}/{coordinator.client_id}/{topic_suffix}"
-        )
+        self._topic = f"{coordinator.prefix}/{coordinator.client_id}/{topic_suffix}"
         self._command_topic = self._topic
         self._attr_unique_id = f"{coordinator.client_id}_{sensor_type}"
         self._attr_name = f"Terneo {coordinator.client_id} {name}"

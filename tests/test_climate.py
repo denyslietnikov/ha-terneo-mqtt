@@ -14,7 +14,7 @@ async def test_climate_entity_creation() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
 
@@ -36,7 +36,7 @@ async def test_climate_mqtt_message_handling() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     coordinator.get_value.return_value = None
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
@@ -172,7 +172,7 @@ async def test_climate_mode_changes_when_load_off() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
 
@@ -210,7 +210,7 @@ async def test_climate_without_air_temp_uses_floor_temp() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = False
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
 
@@ -233,7 +233,7 @@ async def test_climate_async_set_hvac_mode_heat_from_off() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     coordinator.publish_command = AsyncMock()
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
@@ -258,7 +258,7 @@ async def test_climate_async_set_hvac_mode_auto_from_off() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     coordinator.publish_command = AsyncMock()
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
@@ -281,7 +281,7 @@ async def test_climate_async_set_temperature() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     coordinator.publish_command = AsyncMock()
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
@@ -304,7 +304,7 @@ async def test_climate_async_set_temperature_from_off() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     coordinator.publish_command = AsyncMock()
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
@@ -331,7 +331,7 @@ async def test_climate_auto_mode_switches_to_heat_when_load_starts() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
 
@@ -376,7 +376,7 @@ async def test_climate_device_info() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
 
@@ -394,7 +394,7 @@ async def test_climate_hvac_mode_based_on_temperature_comparison() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
 
@@ -440,7 +440,7 @@ async def test_climate_optimistic_mode_heat() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     coordinator.publish_command = AsyncMock()
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
@@ -490,7 +490,7 @@ async def test_climate_optimistic_mode_temperature_auto() -> None:
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.topic_prefix = "terneo"
+    coordinator.prefix = "terneo"
     coordinator.supports_air_temp = True
     coordinator.publish_command = AsyncMock()
     entity = TerneoMQTTClimate(hass, coordinator, "AX")
