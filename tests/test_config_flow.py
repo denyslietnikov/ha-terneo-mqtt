@@ -1,6 +1,8 @@
 """Test TerneoMQ config flow."""
-import pytest
+
 from unittest.mock import MagicMock
+
+import pytest
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 

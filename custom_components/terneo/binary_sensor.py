@@ -1,18 +1,18 @@
 """Binary sensor platform for TerneoMQ integration."""
 
+from homeassistant.components import mqtt
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .base_entity import TerneoMQTTEntity
-from .coordinator import TerneoCoordinator
 from .const import DOMAIN
+from .coordinator import TerneoCoordinator
 
 
 async def async_setup_entry(

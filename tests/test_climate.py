@@ -1,4 +1,5 @@
 """Test TerneoMQ climate entity."""
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -10,6 +11,7 @@ from custom_components.terneo.climate import TerneoMQTTClimate
 async def test_climate_entity_creation() -> None:
     """Test climate entity initialization."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"
@@ -31,6 +33,7 @@ async def test_climate_entity_creation() -> None:
 async def test_climate_mqtt_message_handling() -> None:
     """Test MQTT message handling."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"
@@ -166,6 +169,7 @@ async def test_climate_mqtt_message_handling() -> None:
 async def test_climate_mode_changes_when_load_off() -> None:
     """Test that hvac_mode changes based on load and powerOff."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"
@@ -203,6 +207,7 @@ async def test_climate_mode_changes_when_load_off() -> None:
 async def test_climate_without_air_temp_uses_floor_temp() -> None:
     """Test that when air temp is not supported, floor temp is used as current temp."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"
@@ -225,6 +230,7 @@ async def test_climate_without_air_temp_uses_floor_temp() -> None:
 async def test_climate_async_set_hvac_mode_heat_from_off() -> None:
     """Test setting HVAC mode to HEAT from OFF."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"
@@ -249,6 +255,7 @@ async def test_climate_async_set_hvac_mode_heat_from_off() -> None:
 async def test_climate_async_set_hvac_mode_auto_from_off() -> None:
     """Test setting HVAC mode to AUTO from OFF."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"
@@ -271,6 +278,7 @@ async def test_climate_async_set_hvac_mode_auto_from_off() -> None:
 async def test_climate_async_set_temperature() -> None:
     """Test setting temperature."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"
@@ -293,6 +301,7 @@ async def test_climate_async_set_temperature() -> None:
 async def test_climate_async_set_temperature_from_off() -> None:
     """Test setting temperature when device is OFF."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"
@@ -319,6 +328,7 @@ async def test_climate_async_set_temperature_from_off() -> None:
 async def test_climate_auto_mode_switches_to_heat_when_load_starts() -> None:
     """Test that AUTO mode switches to HEAT when device starts heating (load=1)."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"
@@ -381,6 +391,7 @@ async def test_climate_device_info() -> None:
 async def test_climate_hvac_mode_based_on_temperature_comparison() -> None:
     """Test that hvac_mode changes based on load status regardless of temperatures."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"
@@ -426,6 +437,7 @@ async def test_climate_hvac_mode_based_on_temperature_comparison() -> None:
 async def test_climate_optimistic_mode_heat() -> None:
     """Test optimistic mode when setting HEAT from OFF."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"
@@ -475,6 +487,7 @@ async def test_climate_optimistic_mode_heat() -> None:
 async def test_climate_optimistic_mode_temperature_auto() -> None:
     """Test optimistic mode when setting temperature below floor temp."""
     hass = MagicMock()
+    hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.topic_prefix = "terneo"

@@ -1,4 +1,5 @@
 """Base entity for TerneoMQ integration."""
+
 import logging
 import time
 from abc import ABC, abstractmethod
@@ -7,13 +8,12 @@ from typing import Any
 
 from homeassistant.components.mqtt import ReceiveMessage
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN
 from .coordinator import TerneoCoordinator
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,12 +49,10 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
     @abstractmethod
     def parse_value(self, payload: str) -> Any:
         """Parse MQTT payload into entity value."""
-        pass
 
     @abstractmethod
     def update_value(self, value: Any) -> None:
         """Update entity state with parsed value."""
-        pass
 
     async def publish_command(self, topic_suffix: str, payload: str) -> None:
         """Publish a command to MQTT."""

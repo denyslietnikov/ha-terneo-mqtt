@@ -65,6 +65,13 @@ The climate entity intelligently manages HVAC modes:
 
 When the device starts heating (load changes to 1), the mode automatically switches to HEAT to accurately reflect the current state, regardless of the configured mode.
 
-## License
+## MQTT Broker Configuration
 
-MIT
+This integration requires MQTT broker to be configured in Home Assistant. The integration uses the following MQTT settings:
+
+- **QoS**: 0 (At most once delivery)
+- **Retain**: Commands are sent without retain flag to prevent command replay on device reconnection
+- **Keep Alive**: Use default HA MQTT settings (60 seconds recommended)
+- **Clean Session**: Enabled
+
+Ensure your MQTT broker is properly configured and accessible from Home Assistant.
