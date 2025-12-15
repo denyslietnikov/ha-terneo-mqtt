@@ -22,20 +22,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up the TerneoMQ select entities."""
     devices = config_entry.data.get("devices", [])
-    prefix = config_entry.options.get(
-        "topic_prefix", config_entry.data.get("prefix", "terneo")
-    )
     model = config_entry.options.get("model", config_entry.data.get("model", "AX"))
 
     entities = []
-    coordinators = {}
     for device in devices:
         client_id = device["client_id"]
-        coordinator = TerneoCoordinator(
-            hass, client_id, prefix, True
-        )  # supports_air_temp not used for select
-        coordinators[client_id] = coordinator
-        await coordinator.async_setup()
+        coordinator = hass.data[DOMAIN][config_entry.entry_id][client_id]
         entities.append(
             TerneoSelect(
                 hass,
