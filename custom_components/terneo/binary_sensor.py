@@ -1,6 +1,5 @@
 """Binary sensor platform for TerneoMQ integration."""
 
-from homeassistant.components import mqtt
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -74,16 +73,11 @@ class TerneoBinarySensor(TerneoMQTTEntity, BinarySensorEntity):
         )
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to MQTT topic when entity is added."""
+        """Listen to coordinator updates."""
         await super().async_added_to_hass()
-        self._unsubscribe = await mqtt.async_subscribe(
-            self.hass, self._topic, self._handle_message, qos=0
-        )
 
     async def async_will_remove_from_hass(self) -> None:
-        """Unsubscribe from MQTT topic when entity is removed."""
-        if self._unsubscribe:
-            self._unsubscribe()
+        """Unsubscribe when entity is removed."""
         await super().async_will_remove_from_hass()
 
     def parse_value(self, payload: str) -> int:
