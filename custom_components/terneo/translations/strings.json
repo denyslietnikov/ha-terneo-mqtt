@@ -6,16 +6,18 @@
         "description": "Configure your Terneo MQTT devices.",
         "data": {
           "client_ids": "Devices",
-          "topic_prefix": "MQTT Topic Prefix",
+          "topic_prefix": "Telemetry Topic Prefix",
           "model": "Device Model",
-          "rated_power_w": "Rated Power (W)"
+          "rated_power_w": "Rated Power (W)",
+          "command_prefix": "Command Topic Prefix"
         }
       },
       "options": {
         "title": "Terneo MQTT Options",
         "description": "Configure options for Terneo MQTT.",
         "data": {
-          "topic_prefix": "MQTT Topic Prefix",
+          "topic_prefix": "Telemetry Topic Prefix",
+          "command_prefix": "Command Topic Prefix",
           "model": "Device Model",
           "supports_air_temp": "Supports Air Temperature",
           "rated_power_w": "Rated Power (W)"

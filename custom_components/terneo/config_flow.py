@@ -24,8 +24,12 @@ class TerneoMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not devices:
                 return self.async_abort(reason="no_devices")
 
+            publish_prefix = user_input.get("topic_prefix", "terneo")
+            command_prefix = user_input.get("command_prefix", publish_prefix)
             data = {
-                "prefix": user_input.get("topic_prefix", "terneo"),
+                "prefix": publish_prefix,
+                "publish_prefix": publish_prefix,
+                "command_prefix": command_prefix,
                 "model": user_input.get("model", "AX"),
                 "rated_power_w": user_input.get("rated_power_w", 0),
                 "devices": [{"client_id": cid} for cid in devices],
@@ -43,7 +47,12 @@ class TerneoMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(
                         "topic_prefix",
                         default="terneo",
-                        description="MQTT topic prefix used by the devices",
+                        description="MQTT topic prefix used by the devices (publish)",
+                    ): str,
+                    vol.Optional(
+                        "command_prefix",
+                        default="terneo",
+                        description="MQTT topic prefix for command subscriptions",
                     ): str,
                     vol.Optional(
                         "model",
@@ -87,8 +96,26 @@ class TerneoMQTTOptionsFlow(config_entries.OptionsFlow):
                     vol.Optional(
                         "topic_prefix",
                         default=self._config_entry.options.get(
-                            "topic_prefix", "terneo"
+                            "topic_prefix",
+                            self._config_entry.data.get(
+                                "publish_prefix",
+                                self._config_entry.data.get("prefix", "terneo"),
+                            ),
                         ),
+                    ): str,
+                    vol.Optional(
+                        "command_prefix",
+                        default=self._config_entry.options.get(
+                            "command_prefix",
+                            self._config_entry.data.get(
+                                "command_prefix",
+                                self._config_entry.data.get(
+                                    "publish_prefix",
+                                    self._config_entry.data.get("prefix", "terneo"),
+                                ),
+                            ),
+                        ),
+                        description="MQTT topic prefix for command subscriptions",
                     ): str,
                     vol.Optional(
                         "supports_air_temp",

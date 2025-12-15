@@ -13,7 +13,8 @@ async def test_number_entity_creation() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     coordinator.supports_air_temp = True
     entity = TerneoNumber(
         hass, coordinator, "brightness", "Brightness", 0, 9, 1, "bright", "AX"
@@ -34,7 +35,8 @@ async def test_number_async_added_to_hass() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     coordinator.supports_air_temp = True
     entity = TerneoNumber(
         hass, coordinator, "brightness", "Brightness", 0, 9, 1, "bright", "AX"
@@ -53,7 +55,8 @@ async def test_number_async_will_remove_from_hass() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     coordinator.supports_air_temp = True
     entity = TerneoNumber(
         hass, coordinator, "brightness", "Brightness", 0, 9, 1, "bright", "AX"
@@ -71,7 +74,8 @@ async def test_number_set_native_value() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     coordinator.supports_air_temp = True
     coordinator.publish_command = AsyncMock()
     entity = TerneoNumber(
@@ -92,7 +96,8 @@ async def test_number_mqtt_message_handling() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     coordinator.supports_air_temp = True
     entity = TerneoNumber(
         hass, coordinator, "brightness", "Brightness", 0, 9, 1, "bright", "AX"
@@ -114,7 +119,8 @@ async def test_number_restore_state() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     coordinator.supports_air_temp = True
     coordinator.publish_command = AsyncMock()
     entity = TerneoNumber(

@@ -1,11 +1,12 @@
 """Test TerneoMQ binary sensor entities."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 
 from custom_components.terneo.binary_sensor import TerneoBinarySensor, async_setup_entry
+from custom_components.terneo.const import DOMAIN
 
 
 @pytest.mark.asyncio
@@ -14,7 +15,8 @@ async def test_binary_sensor_entity_creation() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     entity = TerneoBinarySensor(
         hass=hass,
         coordinator=coordinator,
@@ -38,7 +40,8 @@ async def test_binary_sensor_update_value() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     entity = TerneoBinarySensor(
         hass=hass,
         coordinator=coordinator,
@@ -64,7 +67,8 @@ async def test_binary_sensor_parse_value() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     entity = TerneoBinarySensor(
         hass=hass,
         coordinator=coordinator,
@@ -80,11 +84,11 @@ async def test_binary_sensor_parse_value() -> None:
 
 
 @pytest.mark.asyncio
-@patch("custom_components.terneo.binary_sensor.TerneoCoordinator")
-async def test_async_setup_entry(mock_coordinator_class) -> None:
+async def test_async_setup_entry() -> None:
     """Test async setup entry for binary sensor."""
     hass = MagicMock()
     config_entry = MagicMock()
+    config_entry.entry_id = "test_entry"
     config_entry.data = {"devices": [{"client_id": "terneo_ax_1B0026"}]}
     config_entry.options = {
         "topic_prefix": "terneo",
@@ -95,16 +99,16 @@ async def test_async_setup_entry(mock_coordinator_class) -> None:
 
     mock_coordinator = MagicMock()
     mock_coordinator.client_id = "terneo_ax_1B0026"
-    mock_coordinator.prefix = "terneo"
-    mock_coordinator.async_setup = AsyncMock()
-    mock_coordinator_class.return_value = mock_coordinator
+    mock_coordinator.telemetry_prefix = "terneo"
+    mock_coordinator.command_prefix = "terneo"
+
+    # Mock hass.data to return the coordinator
+    hass.data = {
+        DOMAIN: {config_entry.entry_id: {"terneo_ax_1B0026": mock_coordinator}}
+    }
 
     await async_setup_entry(hass, config_entry, async_add_entities)
 
-    mock_coordinator_class.assert_called_once_with(
-        hass, "terneo_ax_1B0026", "terneo", True
-    )
-    mock_coordinator.async_setup.assert_called_once()
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
     assert len(entities) == 1

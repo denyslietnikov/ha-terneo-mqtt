@@ -26,12 +26,19 @@ async def test_config_flow_user() -> None:
 
     # Test with valid data - should create entry directly
     result = await flow.async_step_user(
-        {"client_ids": "terneo_ax_1B0026", "topic_prefix": "terneo", "model": "AX"}
+        {
+            "client_ids": "terneo_ax_1B0026",
+            "topic_prefix": "terneo",
+            "command_prefix": "cmd",
+            "model": "AX",
+        }
     )
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         "prefix": "terneo",
+        "publish_prefix": "terneo",
+        "command_prefix": "cmd",
         "model": "AX",
         "rated_power_w": 0,
         "devices": [{"client_id": "terneo_ax_1B0026"}],
@@ -50,12 +57,15 @@ async def test_config_flow_full() -> None:
         {
             "client_ids": "terneo_ax_1,terneo_ax_2",
             "topic_prefix": "terneo",
+            "command_prefix": "cmd",
             "model": "AX",
         }
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         "prefix": "terneo",
+        "publish_prefix": "terneo",
+        "command_prefix": "cmd",
         "model": "AX",
         "rated_power_w": 0,
         "devices": [{"client_id": "terneo_ax_1"}, {"client_id": "terneo_ax_2"}],
@@ -69,6 +79,7 @@ async def test_options_flow() -> None:
     config_entry = MagicMock(spec=config_entries.ConfigEntry)
     config_entry.entry_id = "test_entry_id"
     config_entry.options = {}
+    config_entry.data = {"publish_prefix": "terneo", "command_prefix": "terneo"}
     hass.config_entries.async_get_known_entry.return_value = config_entry
     hass.config_entries.async_reload = AsyncMock()
     flow = TerneoMQTTOptionsFlow(config_entry)
@@ -82,8 +93,16 @@ async def test_options_flow() -> None:
 
     # Test with valid data
     result = await flow.async_step_init(
-        {"topic_prefix": "new_terneo", "rated_power_w": 1500}
+        {
+            "topic_prefix": "new_terneo",
+            "command_prefix": "cmd",
+            "rated_power_w": 1500,
+        }
     )
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
-    assert result["data"] == {"topic_prefix": "new_terneo", "rated_power_w": 1500}
+    assert result["data"] == {
+        "topic_prefix": "new_terneo",
+        "command_prefix": "cmd",
+        "rated_power_w": 1500,
+    }

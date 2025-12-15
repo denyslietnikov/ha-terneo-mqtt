@@ -13,7 +13,8 @@ async def test_select_entity_creation() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     coordinator.supports_air_temp = True
     entity = TerneoSelect(
         hass,
@@ -38,7 +39,8 @@ async def test_select_async_select_option() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     coordinator.supports_air_temp = True
     coordinator.publish_command = AsyncMock()
     entity = TerneoSelect(
@@ -95,7 +97,8 @@ async def test_select_coordinator_update_handling() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     coordinator.supports_air_temp = True
     entity = TerneoSelect(
         hass,
@@ -150,7 +153,8 @@ async def test_parse_value() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     entity = TerneoSelect(
         hass,
         coordinator,

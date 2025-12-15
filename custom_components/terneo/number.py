@@ -22,20 +22,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up the TerneoMQ number entities."""
     devices = config_entry.data.get("devices", [])
-    prefix = config_entry.options.get(
-        "topic_prefix", config_entry.data.get("prefix", "terneo")
-    )
     model = config_entry.options.get("model", config_entry.data.get("model", "AX"))
 
     entities = []
-    coordinators = {}
     for device in devices:
         client_id = device["client_id"]
-        coordinator = TerneoCoordinator(
-            hass, client_id, prefix, True
-        )  # supports_air_temp not used for number
-        coordinators[client_id] = coordinator
-        await coordinator.async_setup()
+        coordinator = hass.data[DOMAIN][config_entry.entry_id][client_id]
         entities.append(
             TerneoNumber(
                 hass, coordinator, "brightness", "Brightness", 0, 9, 1, "bright", model
@@ -71,8 +63,12 @@ class TerneoNumber(TerneoMQTTEntity, NumberEntity):
             track_availability=False,
         )
         self._topic_suffix = topic_suffix
-        self._topic = f"{coordinator.prefix}/{coordinator.client_id}/{topic_suffix}"
-        self._command_topic = self._topic
+        self._topic = (
+            f"{coordinator.telemetry_prefix}/{coordinator.client_id}/{topic_suffix}"
+        )
+        self._command_topic = (
+            f"{coordinator.command_prefix}/{coordinator.client_id}/{topic_suffix}"
+        )
         self._attr_unique_id = f"{coordinator.client_id}_{sensor_type}"
         self._attr_name = f"Terneo {coordinator.client_id} {name}"
         self._attr_native_min_value = min_value
