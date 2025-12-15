@@ -70,17 +70,18 @@ class TerneoMQTTClimate(ClimateEntity):
         self._model = model
         self._supports_air_temp = coordinator.supports_air_temp
         # Status topics
-        topic_prefix = coordinator.prefix
-        self._air_temp_topic = f"{topic_prefix}/{self._client_id}/airTemp"
-        self._floor_temp_topic = f"{topic_prefix}/{self._client_id}/floorTemp"
-        self._set_temp_topic = f"{topic_prefix}/{self._client_id}/setTemp"
-        self._load_topic = f"{topic_prefix}/{self._client_id}/load"
-        self._power_off_topic = f"{topic_prefix}/{self._client_id}/powerOff"
-        # Command topics
-        self._set_temp_cmd_topic = f"{topic_prefix}/{self._client_id}/setTemp"
-        self._power_off_cmd_topic = f"{topic_prefix}/{self._client_id}/powerOff"
-        self._mode_cmd_topic = f"{topic_prefix}/{self._client_id}/mode"
-        self._mode_topic = f"{topic_prefix}/{self._client_id}/mode"
+        telemetry_prefix = coordinator.telemetry_prefix
+        command_prefix = coordinator.command_prefix
+        self._air_temp_topic = f"{telemetry_prefix}/{self._client_id}/airTemp"
+        self._floor_temp_topic = f"{telemetry_prefix}/{self._client_id}/floorTemp"
+        self._set_temp_topic = f"{telemetry_prefix}/{self._client_id}/setTemp"
+        self._load_topic = f"{telemetry_prefix}/{self._client_id}/load"
+        self._power_off_topic = f"{telemetry_prefix}/{self._client_id}/powerOff"
+        # Status topics already set above; command topics use command_prefix
+        self._set_temp_cmd_topic = f"{command_prefix}/{self._client_id}/setTemp"
+        self._power_off_cmd_topic = f"{command_prefix}/{self._client_id}/powerOff"
+        self._mode_cmd_topic = f"{command_prefix}/{self._client_id}/mode"
+        self._mode_topic = f"{telemetry_prefix}/{self._client_id}/mode"
         self._attr_unique_id = f"terneo_{self._client_id}"
         self._attr_name = f"Terneo {self._client_id}"
         # Initialize from coordinator data

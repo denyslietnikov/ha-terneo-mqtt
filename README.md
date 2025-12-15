@@ -34,27 +34,29 @@ This integration has been tested with Terneo AX model running firmware version 2
 
 During setup:
 1. Provide comma-separated list of MQTT Client IDs (e.g., `terneo_ax_1С0056,terneo_ax_057019`)
-2. Device prefix (default: "terneo")
-3. Thermostat model (AX or SX)
-4. Rated power of heating element in watts (0 = disabled)
+2. Telemetry prefix (default: "terneo") — MQTT topic prefix used by devices when publishing telemetry.
+3. Command prefix (default: same as telemetry prefix, e.g., `cmd`) — MQTT topic prefix the device subscribes to for commands.
+4. Thermostat model (AX or SX)
+5. Rated power of heating element in watts (0 = disabled)
 ### Options
 
 After setup, you can configure additional options:
 - **Topic prefix**: MQTT topic prefix used by devices
+- **Command prefix**: MQTT topic prefix used by devices for command subscriptions
 - **Model**: Thermostat model (AX or SX)
 - **Rated power (W)**: Rated power of the heating element in watts. When set above 0, enables power and energy sensors for HA Energy dashboard integration. Set to 0 to disable energy monitoring.
 ## MQTT Topics
 
 The integration subscribes to and publishes on the following topics:
 
-- `{prefix}/{client_id}/setTemp` - Target temperature (commands)
-- `{prefix}/{client_id}/floorTemp` - Floor temperature
-- `{prefix}/{client_id}/protTemp` - Protection temperature
-- `{prefix}/{client_id}/load` - Load state (0=idle, 1=heating)
-- `{prefix}/{client_id}/powerOff` - Power state (0=on, 1=off)
-- `{prefix}/{client_id}/mode` - Operation mode (0=auto/schedule, 1=manual)
-- `{prefix}/{client_id}/bright` - Display brightness
-- `{prefix}/{client_id}/airTemp` - Current air temperature (optional)
+- `{command_prefix}/{client_id}/setTemp` - Target temperature (commands)
+- `{telemetry_prefix}/{client_id}/floorTemp` - Floor temperature
+- `{telemetry_prefix}/{client_id}/protTemp` - Protection temperature
+- `{telemetry_prefix}/{client_id}/load` - Load state (0=idle, 1=heating)
+- `{telemetry_prefix}/{client_id}/powerOff` - Power state (0=on, 1=off)
+- `{telemetry_prefix}/{client_id}/mode` - Operation mode (0=auto/schedule, 1=manual)
+- `{telemetry_prefix}/{client_id}/bright` - Display brightness
+- `{telemetry_prefix}/{client_id}/airTemp` - Current air temperature (optional)
 
 ## HVAC Mode Logic
 

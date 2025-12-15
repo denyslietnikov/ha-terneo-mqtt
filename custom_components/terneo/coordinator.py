@@ -17,13 +17,15 @@ class TerneoCoordinator:
         self,
         hass: HomeAssistant,
         client_id: str,
-        prefix: str,
+        telemetry_prefix: str,
+        command_prefix: str,
         supports_air_temp: bool = True,
     ) -> None:
         """Initialize the coordinator."""
         self.hass = hass
         self.client_id = client_id
-        self.prefix = prefix
+        self.telemetry_prefix = telemetry_prefix
+        self.command_prefix = command_prefix
         self.supports_air_temp = supports_air_temp
         self._data: dict[str, Any] = {}
         self._subscriptions: list[Any] = []
@@ -31,16 +33,24 @@ class TerneoCoordinator:
     async def async_setup(self) -> None:
         """Set up MQTT subscriptions."""
         topics = [
-            ("floorTemp", f"{self.prefix}/{self.client_id}/floorTemp"),
-            ("protTemp", f"{self.prefix}/{self.client_id}/protTemp"),
-            ("setTemp", f"{self.prefix}/{self.client_id}/setTemp"),
-            ("load", f"{self.prefix}/{self.client_id}/load"),
-            ("powerOff", f"{self.prefix}/{self.client_id}/powerOff"),
-            ("mode", f"{self.prefix}/{self.client_id}/mode"),
-            ("bright", f"{self.prefix}/{self.client_id}/bright"),
+            (
+                "floorTemp",
+                f"{self.telemetry_prefix}/{self.client_id}/floorTemp",
+            ),
+            (
+                "protTemp",
+                f"{self.telemetry_prefix}/{self.client_id}/protTemp",
+            ),
+            ("setTemp", f"{self.telemetry_prefix}/{self.client_id}/setTemp"),
+            ("load", f"{self.telemetry_prefix}/{self.client_id}/load"),
+            ("powerOff", f"{self.telemetry_prefix}/{self.client_id}/powerOff"),
+            ("mode", f"{self.telemetry_prefix}/{self.client_id}/mode"),
+            ("bright", f"{self.telemetry_prefix}/{self.client_id}/bright"),
         ]
         if self.supports_air_temp:
-            topics.append(("airTemp", f"{self.prefix}/{self.client_id}/airTemp"))
+            topics.append(
+                ("airTemp", f"{self.telemetry_prefix}/{self.client_id}/airTemp")
+            )
 
         for key, topic in topics:
             unsub = await mqtt.async_subscribe(
@@ -91,5 +101,5 @@ class TerneoCoordinator:
         self, topic_suffix: str, payload: str, retain: bool = False
     ) -> None:
         """Publish a command to MQTT."""
-        topic = f"{self.prefix}/{self.client_id}/{topic_suffix}"
+        topic = f"{self.command_prefix}/{self.client_id}/{topic_suffix}"
         await mqtt.async_publish(self.hass, topic, payload, retain=retain)

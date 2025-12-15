@@ -7,6 +7,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .coordinator import TerneoCoordinator
+from .helpers import get_mqtt_prefixes
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -15,12 +16,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up TerneoMQ from a config entry."""
     # Create coordinators for each device
     hass.data.setdefault(DOMAIN, {}).setdefault(entry.entry_id, {})
-    prefix = entry.options.get("topic_prefix", entry.data.get("prefix", "terneo"))
+    publish_prefix, command_prefix = get_mqtt_prefixes(entry)
+    supports_air_temp = entry.options.get(
+        "supports_air_temp", entry.data.get("supports_air_temp", True)
+    )
     for device in entry.data.get("devices", []):
         client_id = device["client_id"]
         coordinator = TerneoCoordinator(
-            hass, client_id, prefix, True
-        )  # supports_air_temp=True for now
+            hass, client_id, publish_prefix, command_prefix, supports_air_temp
+        )
         hass.data[DOMAIN][entry.entry_id][client_id] = coordinator
         await coordinator.async_setup()
 

@@ -15,7 +15,8 @@ async def test_binary_sensor_entity_creation() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     entity = TerneoBinarySensor(
         hass=hass,
         coordinator=coordinator,
@@ -39,7 +40,8 @@ async def test_binary_sensor_update_value() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     entity = TerneoBinarySensor(
         hass=hass,
         coordinator=coordinator,
@@ -65,7 +67,8 @@ async def test_binary_sensor_parse_value() -> None:
     hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client_id = "terneo_ax_1B0026"
-    coordinator.prefix = "terneo"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
     entity = TerneoBinarySensor(
         hass=hass,
         coordinator=coordinator,
@@ -96,7 +99,8 @@ async def test_async_setup_entry() -> None:
 
     mock_coordinator = MagicMock()
     mock_coordinator.client_id = "terneo_ax_1B0026"
-    mock_coordinator.prefix = "terneo"
+    mock_coordinator.telemetry_prefix = "terneo"
+    mock_coordinator.command_prefix = "terneo"
 
     # Mock hass.data to return the coordinator
     hass.data = {
