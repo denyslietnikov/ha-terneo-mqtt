@@ -11,6 +11,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .base_entity import TerneoMQTTEntity
+from .coordinator import TerneoCoordinator
 from .const import DOMAIN
 
 
@@ -24,18 +25,22 @@ async def async_setup_entry(
     prefix = config_entry.options.get(
         "topic_prefix", config_entry.data.get("prefix", "terneo")
     )
+    supports_air_temp = config_entry.options.get("supports_air_temp", True)
     model = config_entry.options.get("model", config_entry.data.get("model", "AX"))
     entities = []
+    coordinators = {}
     for device in devices:
         client_id = device["client_id"]
+        coordinator = TerneoCoordinator(hass, client_id, prefix, supports_air_temp)
+        coordinators[client_id] = coordinator
+        await coordinator.async_setup()
         entities.append(
             TerneoBinarySensor(
-                client_id=client_id,
-                prefix=prefix,
+                hass=hass,
+                coordinator=coordinator,
                 sensor_type="heating",
                 name="Heating",
                 device_class=BinarySensorDeviceClass.HEAT,
-                topic_suffix="load",
                 model=model,
             )
         )
@@ -47,28 +52,23 @@ class TerneoBinarySensor(TerneoMQTTEntity, BinarySensorEntity):
 
     def __init__(
         self,
-        client_id: str,
-        prefix: str,
+        hass: HomeAssistant,
+        coordinator: TerneoCoordinator,
         sensor_type: str,
         name: str,
         device_class: BinarySensorDeviceClass | None,
-        topic_suffix: str,
         model: str = "AX",
     ) -> None:
         """Initialize the binary sensor."""
-        super().__init__(
-            None, client_id, prefix, sensor_type, name, topic_suffix, model
-        )  # hass will be set later
-        self._attr_unique_id = f"{client_id}_{sensor_type}"
-        self._attr_name = f"Terneo {client_id} {name}"
+        super().__init__(hass, coordinator, sensor_type, name, model)
         self._attr_device_class = device_class
         self._attr_is_on = None
 
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, client_id)},
+            identifiers={(DOMAIN, coordinator.client_id)},
             manufacturer="Terneo",
             model=self._model,
-            name=f"Terneo {client_id}",
+            name=f"Terneo {coordinator.client_id}",
         )
 
     async def async_added_to_hass(self) -> None:

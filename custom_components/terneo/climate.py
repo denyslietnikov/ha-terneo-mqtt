@@ -3,15 +3,18 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
-from homeassistant.components import climate, mqtt
+from homeassistant.components import climate
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.const import UnitOfTemperature
 
 from .const import DOMAIN
+from .coordinator import TerneoCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,11 +32,13 @@ async def async_setup_entry(
     supports_air_temp = config_entry.options.get("supports_air_temp", True)
     model = config_entry.options.get("model", config_entry.data.get("model", "AX"))
     entities = []
+    coordinators = {}
     for device in devices:
         client_id = device["client_id"]
-        entities.append(
-            TerneoMQTTClimate(hass, client_id, prefix, supports_air_temp, model)
-        )
+        coordinator = TerneoCoordinator(hass, client_id, prefix, supports_air_temp)
+        coordinators[client_id] = coordinator
+        await coordinator.async_setup()
+        entities.append(TerneoMQTTClimate(hass, coordinator, model))
     if entities:
         async_add_entities(entities)
 
@@ -61,35 +66,34 @@ class TerneoMQTTClimate(ClimateEntity):
     def __init__(
         self,
         hass: HomeAssistant,
-        client_id: str,
-        topic_prefix: str,
-        supports_air_temp: bool = True,
+        coordinator: TerneoCoordinator,
         model: str = "AX",
-        state_topic: str = None,
-        command_topic: str = None,
     ) -> None:
         """Initialize the climate device."""
         self.hass = hass
-        self._client_id = client_id
+        self.coordinator = coordinator
+        self._client_id = coordinator.client_id
         self._model = model
-        self._topic_prefix = topic_prefix
-        self._supports_air_temp = supports_air_temp
+        self._supports_air_temp = coordinator.supports_air_temp
         # Status topics
-        self._air_temp_topic = f"{topic_prefix}/{client_id}/airTemp"
-        self._floor_temp_topic = f"{topic_prefix}/{client_id}/floorTemp"
-        self._set_temp_topic = f"{topic_prefix}/{client_id}/setTemp"
-        self._load_topic = f"{topic_prefix}/{client_id}/load"
-        self._power_off_topic = f"{topic_prefix}/{client_id}/powerOff"
+        topic_prefix = coordinator.topic_prefix
+        self._air_temp_topic = f"{topic_prefix}/{self._client_id}/airTemp"
+        self._floor_temp_topic = f"{topic_prefix}/{self._client_id}/floorTemp"
+        self._set_temp_topic = f"{topic_prefix}/{self._client_id}/setTemp"
+        self._load_topic = f"{topic_prefix}/{self._client_id}/load"
+        self._power_off_topic = f"{topic_prefix}/{self._client_id}/powerOff"
         # Command topics
-        self._set_temp_cmd_topic = f"{topic_prefix}/{client_id}/setTemp"
-        self._power_off_cmd_topic = f"{topic_prefix}/{client_id}/powerOff"
-        self._mode_cmd_topic = f"{topic_prefix}/{client_id}/mode"
-        self._mode_topic = f"{topic_prefix}/{client_id}/mode"
-        self._attr_unique_id = f"terneo_{client_id}"
-        self._attr_name = f"Terneo {client_id}"
+        self._set_temp_cmd_topic = f"{topic_prefix}/{self._client_id}/setTemp"
+        self._power_off_cmd_topic = f"{topic_prefix}/{self._client_id}/powerOff"
+        self._mode_cmd_topic = f"{topic_prefix}/{self._client_id}/mode"
+        self._mode_topic = f"{topic_prefix}/{self._client_id}/mode"
+        self._attr_unique_id = f"terneo_{self._client_id}"
+        self._attr_name = f"Terneo {self._client_id}"
+        # Initialize from coordinator data
         self._attr_current_temperature = None
         self._attr_target_temperature = None
         self._floor_temp = None
+        self._air_temp = None
         self._power_off = None
         self._load = None
         self._mode = None  # 0 = auto, 1 = manual
@@ -104,62 +108,49 @@ class TerneoMQTTClimate(ClimateEntity):
         self.async_write_ha_state()
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to MQTT topics."""
+        """Listen to coordinator updates."""
         await super().async_added_to_hass()
-        if self._supports_air_temp:
-            self._unsub_air_temp = await mqtt.async_subscribe(
-                self.hass, self._air_temp_topic, self._handle_message, 0
-            )
-            self.async_on_remove(self._unsub_air_temp)
-        self._unsub_floor_temp = await mqtt.async_subscribe(
-            self.hass, self._floor_temp_topic, self._handle_message, 0
+        self._unsub_dispatcher = async_dispatcher_connect(
+            self.hass,
+            f"{DOMAIN}_{self._client_id}_update",
+            self._handle_coordinator_update,
         )
-        self._unsub_set_temp = await mqtt.async_subscribe(
-            self.hass, self._set_temp_topic, self._handle_message, 0
-        )
-        self._unsub_load = await mqtt.async_subscribe(
-            self.hass, self._load_topic, self._handle_message, 0
-        )
-        self._unsub_power_off = await mqtt.async_subscribe(
-            self.hass, self._power_off_topic, self._handle_message, 0
-        )
-        self._unsub_mode = await mqtt.async_subscribe(
-            self.hass, self._mode_topic, self._handle_message, 0
-        )
-        self.async_on_remove(self._unsub_floor_temp)
-        self.async_on_remove(self._unsub_set_temp)
-        self.async_on_remove(self._unsub_load)
-        self.async_on_remove(self._unsub_power_off)
-        self.async_on_remove(self._unsub_mode)
 
     async def async_will_remove_from_hass(self) -> None:
-        """Unsubscribe from MQTT topics."""
+        """Unsubscribe from dispatcher."""
+        if self._unsub_dispatcher:
+            self._unsub_dispatcher()
         await super().async_will_remove_from_hass()
         if self._optimistic_task:
             self._optimistic_task.cancel()
-            self._optimistic_task = None
 
     @callback
-    def _handle_message(self, msg) -> None:
-        """Handle status message from MQTT."""
-        _LOGGER.debug("Received MQTT message: %s %s", msg.topic, msg.payload)
+    def _handle_coordinator_update(self, key: str, value: Any) -> None:
+        """Handle update from coordinator."""
+        if key in ["floorTemp", "airTemp", "setTemp", "load", "powerOff", "mode"]:
+            self._handle_message_update(key, value)
+
+    @callback
+    def _handle_message_update(self, key: str, value: Any) -> None:
+        """Handle message update from coordinator."""
         try:
             updated = False
-            if msg.topic == self._air_temp_topic:
-                self._attr_current_temperature = float(msg.payload)
+            if key == "airTemp":
+                self._air_temp = float(value)
+                self._attr_current_temperature = float(value)
                 updated = True
-            elif msg.topic == self._floor_temp_topic:
-                self._floor_temp = float(msg.payload)
+            elif key == "floorTemp":
+                self._floor_temp = float(value)
                 # Update hvac_mode based on setTemp vs floorTemp
                 self._update_hvac_mode_from_temps()
                 updated = True
-            elif msg.topic == self._set_temp_topic:
-                self._attr_target_temperature = float(msg.payload)
+            elif key == "setTemp":
+                self._attr_target_temperature = float(value)
                 # Update hvac_mode based on setTemp vs floorTemp
                 self._update_hvac_mode_from_temps()
                 updated = True
-            elif msg.topic == self._load_topic:
-                self._load = int(msg.payload)
+            elif key == "load":
+                self._load = int(value)
                 # Reset optimistic mode based on real state change
                 if self._optimistic_mode == climate.HVACMode.HEAT and self._load == 1:
                     # Device started heating, HEAT is now real
@@ -175,19 +166,19 @@ class TerneoMQTTClimate(ClimateEntity):
                     self._optimistic_mode = None
                 self._update_hvac_mode_from_temps()
                 updated = True
-            elif msg.topic == self._power_off_topic:
-                self._power_off = int(msg.payload)
+            elif key == "powerOff":
+                self._power_off = int(value)
                 self._update_hvac_mode_from_temps()
                 updated = True
-            elif msg.topic == self._mode_topic:
-                self._mode = int(msg.payload)
+            elif key == "mode":
+                self._mode = int(value)
                 self._update_hvac_mode_from_temps()
                 updated = True
 
             if updated:
                 self.async_write_ha_state()
         except ValueError:
-            _LOGGER.error("Invalid payload in message: %s", msg.payload)
+            _LOGGER.error("Invalid value in update: %s", value)
 
     def _update_hvac_mode_from_temps(self) -> None:
         """Update hvac_mode and hvac_action based on powerOff, load and temperatures."""
@@ -202,17 +193,23 @@ class TerneoMQTTClimate(ClimateEntity):
                 self._attr_hvac_action = climate.HVACAction.IDLE
             return
 
+        # Get current values from coordinator
+        power_off = self._power_off
+        load = self._load
+        floor_temp = self._floor_temp
+        air_temp = self._air_temp
+
         # hvac_mode is based on powerOff, load and temperatures
-        if self._power_off == 1:
+        if power_off == 1:
             self._attr_hvac_mode = climate.HVACMode.OFF
             self._attr_hvac_action = climate.HVACAction.OFF
-        elif self._power_off == 0:
+        elif power_off == 0:
             # Check if heating is needed based on temperatures
             heating_needed = self._is_heating_needed()
-            if not heating_needed or self._load == 0:
+            if not heating_needed or load == 0:
                 self._attr_hvac_mode = climate.HVACMode.AUTO
                 self._attr_hvac_action = climate.HVACAction.IDLE
-            elif self._load == 1:
+            elif load == 1:
                 self._attr_hvac_mode = climate.HVACMode.HEAT
                 self._attr_hvac_action = climate.HVACAction.HEATING
             else:
@@ -224,9 +221,11 @@ class TerneoMQTTClimate(ClimateEntity):
             self._attr_hvac_mode = climate.HVACMode.OFF
             self._attr_hvac_action = climate.HVACAction.OFF
 
-        # Fallback: if no airTemp but have floorTemp, use floorTemp as current temp
-        if self._attr_current_temperature is None and self._floor_temp is not None:
-            self._attr_current_temperature = self._floor_temp
+        # Set current temperature
+        if air_temp is not None:
+            self._attr_current_temperature = air_temp
+        elif floor_temp is not None:
+            self._attr_current_temperature = floor_temp
 
     def _is_heating_needed(self) -> bool:
         """Check if heating is needed based on target and current temperatures."""
@@ -239,31 +238,26 @@ class TerneoMQTTClimate(ClimateEntity):
         temperature = kwargs.get("temperature")
         if temperature is not None:
             _LOGGER.debug("Setting temperature to %s", temperature)
+            # Get current values from local state
+            current_hvac_mode = self._attr_hvac_mode
+            floor_temp = self._floor_temp
+            power_off = self._power_off
+
             # If currently OFF, switch to HEAT when setting temperature
-            if self._attr_hvac_mode == climate.HVACMode.OFF:
+            if current_hvac_mode == climate.HVACMode.OFF:
                 _LOGGER.debug("Switching to HEAT mode for temperature setting")
-                await mqtt.async_publish(
-                    self.hass, self._mode_cmd_topic, "3", retain=False
-                )
-                await mqtt.async_publish(
-                    self.hass, self._power_off_cmd_topic, "0", retain=False
-                )
+                await self.coordinator.publish_command("mode", "3")
+                await self.coordinator.publish_command("powerOff", "0")
                 self._power_off = 0  # Update local state
                 self._mode = 3  # Update local state
                 self._load = 1  # Optimistically assume heating starts
                 self._attr_hvac_mode = climate.HVACMode.HEAT
-            await mqtt.async_publish(
-                self.hass, self._set_temp_cmd_topic, str(temperature), retain=False
-            )
+            await self.coordinator.publish_command("setTemp", str(temperature))
             # Optimistically update the state
             self._attr_target_temperature = temperature
 
             # If temperature is below floor temp, optimistically set to AUTO
-            if (
-                self._floor_temp is not None
-                and temperature < self._floor_temp
-                and self._power_off == 0
-            ):
+            if floor_temp is not None and temperature < floor_temp and power_off == 0:
                 self._optimistic_mode = climate.HVACMode.AUTO
                 if self._optimistic_task:
                     self._optimistic_task.cancel()
@@ -280,10 +274,8 @@ class TerneoMQTTClimate(ClimateEntity):
         _LOGGER.debug("Setting HVAC mode to %s", hvac_mode)
         if hvac_mode == climate.HVACMode.HEAT:
             # Set to manual mode (3) and turn on
-            await mqtt.async_publish(self.hass, self._mode_cmd_topic, "3", retain=False)
-            await mqtt.async_publish(
-                self.hass, self._power_off_cmd_topic, "0", retain=False
-            )
+            await self.coordinator.publish_command("mode", "3")
+            await self.coordinator.publish_command("powerOff", "0")
             # Set optimistic mode for 60 seconds
             self._optimistic_mode = climate.HVACMode.HEAT
             if self._optimistic_task:
@@ -293,18 +285,14 @@ class TerneoMQTTClimate(ClimateEntity):
             )
         elif hvac_mode == climate.HVACMode.AUTO:
             # Turn on (leave current mode as is)
-            await mqtt.async_publish(
-                self.hass, self._power_off_cmd_topic, "0", retain=False
-            )
+            await self.coordinator.publish_command("powerOff", "0")
             # Reset optimistic mode
             if self._optimistic_task:
                 self._optimistic_task.cancel()
                 self._optimistic_task = None
             self._optimistic_mode = None
         elif hvac_mode == climate.HVACMode.OFF:
-            await mqtt.async_publish(
-                self.hass, self._power_off_cmd_topic, "1", retain=False
-            )
+            await self.coordinator.publish_command("powerOff", "1")
             # Reset optimistic mode
             if self._optimistic_task:
                 self._optimistic_task.cancel()

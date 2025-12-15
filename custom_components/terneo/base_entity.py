@@ -5,11 +5,14 @@ from abc import ABC, abstractmethod
 from datetime import timedelta
 from typing import Any
 
-from homeassistant.components import mqtt
 from homeassistant.components.mqtt import ReceiveMessage
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_track_time_interval
+
+from .const import DOMAIN
+from .coordinator import TerneoCoordinator
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,8 +24,7 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
     def __init__(
         self,
         hass: HomeAssistant,
-        client_id: str,
-        prefix: str,
+        coordinator: "TerneoCoordinator",
         sensor_type: str,
         name: str,
         topic_suffix: str,
@@ -32,13 +34,12 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
         """Initialize the base entity."""
         super().__init__()
         self.hass = hass
-        self._client_id = client_id
-        self._prefix = prefix
+        self.coordinator = coordinator
+        self._client_id = coordinator.client_id
         self._sensor_type = sensor_type
-        self._topic = f"{prefix}/{client_id}/{topic_suffix}"
-        self._command_topic = f"{prefix}/{client_id}/{topic_suffix}"
-        self._name = f"Terneo {client_id} {name}"
-        self._unique_id = f"{client_id}_{sensor_type}"
+        self._topic_suffix = topic_suffix
+        self._name = f"Terneo {coordinator.client_id} {name}"
+        self._unique_id = f"{self._client_id}_{sensor_type}"
         self._last_update = None
         self._attr_available = True  # Always available for settings
         self._unavailable_timer = None
@@ -55,39 +56,52 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
         """Update entity state with parsed value."""
         pass
 
-    async def publish_command(self, payload: str) -> None:
+    async def publish_command(self, topic_suffix: str, payload: str) -> None:
         """Publish a command to MQTT."""
         _LOGGER.debug(
             "Publishing %s command: %s to %s",
             self._sensor_type,
             payload,
-            self._command_topic,
+            topic_suffix,
         )
-        await mqtt.async_publish(
-            self.hass, self._command_topic, payload, qos=0, retain=False
-        )
+        await self.coordinator.publish_command(topic_suffix, payload)
 
     async def async_added_to_hass(self) -> None:
-        """Set up availability timer when entity is added."""
+        """Set up availability timer and dispatcher listener when entity is added."""
         await super().async_added_to_hass()
+        self._unsub_dispatcher = async_dispatcher_connect(
+            self.hass,
+            f"{DOMAIN}_{self._client_id}_update",
+            self._handle_coordinator_update,
+        )
         if self.track_availability:
             self._unavailable_timer = async_track_time_interval(
                 self.hass, self._check_availability, timedelta(minutes=5)
             )
 
     async def async_will_remove_from_hass(self) -> None:
-        """Cancel availability timer when entity is removed."""
+        """Cancel availability timer and dispatcher listener when entity is removed."""
+        if self._unsub_dispatcher:
+            self._unsub_dispatcher()
         if self._unavailable_timer:
             self._unavailable_timer()
         await super().async_will_remove_from_hass()
 
     @callback
-    def _check_availability(self, now=None) -> None:
-        """Check if entity should be marked unavailable."""
-        if self._last_update is None or time.time() - self._last_update > 300:
-            if self.track_availability:
-                self._attr_available = False
-                self.async_write_ha_state()
+    def _handle_coordinator_update(self, key: str, value: Any) -> None:
+        """Handle update from coordinator."""
+        if key == self._topic_suffix:
+            self.update_value(value)
+            self._last_update = time.time()
+            self._attr_available = True
+            self.async_write_ha_state()
+
+    @callback
+    def _check_availability(self, now: Any) -> None:
+        """Check if entity is still available based on last update time."""
+        if self._last_update and (time.time() - self._last_update) > 300:  # 5 minutes
+            self._attr_available = False
+            self.async_write_ha_state()
 
     @callback
     def _handle_message(self, msg: ReceiveMessage) -> None:
