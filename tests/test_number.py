@@ -1,4 +1,5 @@
 """Test TerneoMQ number entities."""
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

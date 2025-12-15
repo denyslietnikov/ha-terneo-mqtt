@@ -1,4 +1,5 @@
 """Test TerneoMQ sensor entities."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -154,7 +155,7 @@ async def test_sensor_async_setup_entry(mock_coordinator_class) -> None:
     config_entry.data = {"devices": [{"client_id": "test_device"}]}
     config_entry.options = {"topic_prefix": "terneo", "model": "AX"}
 
-    async_add_entities = AsyncMock()
+    async_add_entities = MagicMock()
 
     await async_setup_entry(hass, config_entry, async_add_entities)
 
@@ -191,7 +192,7 @@ async def test_state_sensor_mqtt_message_handling() -> None:
         "powerOff": 1,
         "load": 0,
         "mode": None,
-    }.get(key, None)
+    }.get(key)
     entity = TerneoStateSensor(hass=hass, coordinator=coordinator, model="AX")
     entity.hass = hass
 
@@ -212,7 +213,7 @@ async def test_state_sensor_mqtt_message_handling() -> None:
         "powerOff": 0,
         "load": 0,
         "mode": None,
-    }.get(key, None)
+    }.get(key)
     entity._handle_coordinator_update("powerOff", 0)
 
     assert entity._attr_native_value == "Idle"
@@ -226,7 +227,7 @@ async def test_state_sensor_mqtt_message_handling() -> None:
         "powerOff": 0,
         "load": 1,
         "mode": None,
-    }.get(key, None)
+    }.get(key)
     entity._handle_coordinator_update("load", 1)
 
     assert entity._attr_native_value == "Heat"
@@ -251,7 +252,7 @@ async def test_sensor_async_setup_entry_with_energy(mock_coordinator_class) -> N
         "model": "AX",
     }
 
-    async_add_entities = AsyncMock()
+    async_add_entities = MagicMock()
 
     await async_setup_entry(hass, config_entry, async_add_entities)
 

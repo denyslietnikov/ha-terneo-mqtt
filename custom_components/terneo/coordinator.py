@@ -2,10 +2,10 @@
 
 from typing import Any
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.components import mqtt
 from homeassistant.components.mqtt import ReceiveMessage
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN
 

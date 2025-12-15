@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+
+      - name: Run hassfest
+        uses: home-assistant/actions/hassfest@master
+
+      - name: Run pytest
+        run: |
+          python -m pytest tests/ -v --cov=custom_components/terneo --cov-report=xml
+
+      - name: Run ruff
+        run: |
+          pip install ruff
+          ruff check custom_components/terneo tests
+          ruff format --check custom_components/terneo tests

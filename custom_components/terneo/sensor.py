@@ -9,16 +9,16 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .base_entity import TerneoMQTTEntity
-from .coordinator import TerneoCoordinator
 from .const import DOMAIN
+from .coordinator import TerneoCoordinator
 
 
 async def async_setup_entry(
@@ -136,12 +136,11 @@ class TerneoSensor(TerneoMQTTEntity, SensorEntity):
         """Parse MQTT payload for sensor."""
         if self._sensor_type in ["floor_temp", "prot_temp"]:
             return float(payload)
-        elif self._sensor_type == "load":
+        if self._sensor_type == "load":
             return int(payload)
-        else:
-            raise ValueError(f"Unknown sensor type {self._sensor_type}")
+        raise ValueError(f"Unknown sensor type {self._sensor_type}")
 
-    def update_value(self, value: float | int) -> None:
+    def update_value(self, value: float) -> None:
         """Update sensor value."""
         self._attr_native_value = value
 
@@ -194,11 +193,10 @@ class TerneoStateSensor(SensorEntity):
         load = self.coordinator.get_value("load")
         if power_off == 1:
             self._attr_native_value = "Off"
+        elif load == 1:
+            self._attr_native_value = "Heat"
         else:
-            if load == 1:
-                self._attr_native_value = "Heat"
-            else:
-                self._attr_native_value = "Idle"
+            self._attr_native_value = "Idle"
 
 
 class TerneoPowerSensor(SensorEntity):

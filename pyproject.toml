@@ -1,0 +1,30 @@
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "C90", "I", "N", "UP", "YTT", "S", "BLE", "FBT", "B", "A", "COM", "C4", "DTZ", "T10", "DJ", "EM", "EXE", "FA", "ISC", "ICN", "G", "INP", "PIE", "T20", "PYI", "PT", "Q", "RSE", "RET", "SLF", "SLOT", "SIM", "TID", "TCH", "INT", "ARG", "PTH", "ERA", "PD", "PGH", "PL", "TRY", "FLY", "NPY", "AIR", "PERF", "FURB", "LOG", "RUF"]
+ignore = [
+    "S101", "S104",  # Allow assert and hardcoded passwords in tests
+    "COM812", "ISC001",  # Trailing comma and import sorting
+    "PLR0913", "PLR0915", "C901",  # Allow complex functions and many arguments
+    "FBT001", "FBT002", "FBT003",  # Allow boolean arguments
+    "PLR2004",  # Allow magic values
+    "SLF001",  # Allow private member access in tests
+    "ARG002",  # Allow unused arguments
+    "RUF012",  # Allow mutable class attributes
+    "TRY400",  # Allow logging.error in except
+    "E501",  # Allow long lines
+    "SIM102",  # Allow nested if
+    "TC001",  # Move application import into a type-checking block
+    "TC002",  # Move third-party import into a type-checking block
+    "B007",   # Loop control variable not used within the loop body
+    "TRY003", # Avoid specifying long messages outside the exception class
+    "EM102",  # Exception must not use an f-string literal
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

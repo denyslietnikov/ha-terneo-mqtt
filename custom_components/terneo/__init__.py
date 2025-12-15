@@ -1,8 +1,9 @@
 """TerneoMQ integration for Home Assistant."""
+
 import logging
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-
 
 _LOGGER = logging.getLogger(__name__)
 

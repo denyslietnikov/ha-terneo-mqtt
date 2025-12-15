@@ -1,4 +1,5 @@
 """Select platform for TerneoMQ integration."""
+
 import logging
 
 from homeassistant.components.select import SelectEntity
@@ -8,8 +9,8 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .base_entity import TerneoMQTTEntity
-from .coordinator import TerneoCoordinator
 from .const import DOMAIN
+from .coordinator import TerneoCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
