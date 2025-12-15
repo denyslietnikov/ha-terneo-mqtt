@@ -79,9 +79,7 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
         self._attr_name = f"Terneo {coordinator.client_id} {name}"
         self._options = options
         self._attr_options = options
-        self._attr_current_option = self.parse_value(
-            str(coordinator.get_value(sensor_type) or 0)
-        )
+        # Initial value will be set in async_added_to_hass from coordinator data
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.client_id)},
@@ -99,14 +97,17 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
         # Map option to payload: schedule -> 0, manual -> 3, away -> 4, temporary -> 5
         payload_map = {"schedule": "0", "manual": "3", "away": "4", "temporary": "5"}
         payload = payload_map.get(option, "0")
-        await self.publish_command(self._topic_suffix, payload)
+        await self.publish_command(self._topic_suffix, payload, retain=False)
         self._attr_current_option = option
         self.async_write_ha_state()
 
     def parse_value(self, payload: str) -> str:
         """Parse MQTT payload for select."""
         value_map = {"0": "schedule", "3": "manual", "4": "away", "5": "temporary"}
-        return value_map.get(payload, "schedule")
+        if isinstance(payload, bytes):
+            payload = payload.decode(errors="ignore")
+        payload_str = str(payload)
+        return value_map.get(payload_str, "schedule")
 
     def update_value(self, value: str) -> None:
         """Update select value."""
