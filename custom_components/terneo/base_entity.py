@@ -58,7 +58,9 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
     def update_value(self, value: Any) -> None:
         """Update entity state with parsed value."""
 
-    async def publish_command(self, topic_suffix: str, payload: str) -> None:
+    async def publish_command(
+        self, topic_suffix: str, payload: str, retain: bool = False
+    ) -> None:
         """Publish a command to MQTT."""
         _LOGGER.debug(
             "Publishing %s command: %s to %s",
@@ -66,7 +68,7 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
             payload,
             topic_suffix,
         )
-        await self.coordinator.publish_command(topic_suffix, payload)
+        await self.coordinator.publish_command(topic_suffix, payload, retain=retain)
 
     async def async_added_to_hass(self) -> None:
         """Set up availability timer and dispatcher listener when entity is added."""
@@ -76,6 +78,9 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
             f"{DOMAIN}_{self._client_id}_update",
             self._handle_coordinator_update,
         )
+        # Update with current coordinator data
+        for key, value in self.coordinator._data.items():
+            self._handle_coordinator_update(key, value)
         if self.track_availability:
             self._unavailable_timer = async_track_time_interval(
                 self.hass, self._check_availability, timedelta(minutes=5)
