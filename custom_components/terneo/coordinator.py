@@ -86,7 +86,9 @@ class TerneoCoordinator:
         """Get current value for a key."""
         return self._data.get(key)
 
-    async def publish_command(self, topic_suffix: str, payload: str) -> None:
+    async def publish_command(
+        self, topic_suffix: str, payload: str, retain: bool = False
+    ) -> None:
         """Publish a command to MQTT."""
         topic = f"{self.prefix}/{self.client_id}/{topic_suffix}"
-        await mqtt.async_publish(self.hass, topic, payload)
+        await mqtt.async_publish(self.hass, topic, payload, retain=retain)
