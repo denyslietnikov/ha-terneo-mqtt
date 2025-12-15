@@ -226,7 +226,6 @@ class TerneoPowerSensor(SensorEntity):
         self._attr_unique_id = f"{self._client_id}_power"
         self._attr_name = f"Terneo {self._client_id} Power"
         self._attr_native_value = None
-        self.entity_id = f"sensor.terneo_{self._client_id}_power"
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._client_id)},
@@ -284,7 +283,6 @@ class TerneoEnergySensor(RestoreEntity, SensorEntity):
         self._attr_unique_id = f"{self._client_id}_energy"
         self._attr_name = f"Terneo {self._client_id} Energy"
         self._attr_native_value = 0.0
-        self.entity_id = f"sensor.terneo_{self._client_id}_energy"
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._client_id)},
