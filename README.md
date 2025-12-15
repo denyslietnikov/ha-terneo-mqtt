@@ -10,14 +10,19 @@ This integration provides the following entities for each configured Terneo devi
 - **Sensor Entities**:
   - Floor temperature
   - Protection temperature
-  - Load (current consumption indicator)
   - Mode (Off/Idle/Heat based on device state)
   - Power (current power consumption in watts, requires rated power setting)
   - Energy (accumulated energy consumption in kWh, requires rated power setting)
+- **Binary Sensor Entity**:
+  - Heating (on/off indicator)
 - **Number Entity**:
   - Brightness (0-9 for display brightness)
 - **Select Entity**:
   - Mode (schedule/manual)
+
+## Testing
+
+This integration has been tested with Terneo AX model running firmware version 2.4 (Owl 3).
 
 ## Installation
 
