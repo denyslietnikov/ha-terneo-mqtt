@@ -45,6 +45,8 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
         self._unavailable_timer = None
         self.track_availability = track_availability
         self._model = model
+        self._topic = f"{coordinator.prefix}/{coordinator.client_id}/{topic_suffix}"
+        self._unsubscribe = None
 
     @abstractmethod
     def parse_value(self, payload: str) -> Any:

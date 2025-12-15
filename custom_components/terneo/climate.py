@@ -77,7 +77,7 @@ class TerneoMQTTClimate(ClimateEntity):
         self._model = model
         self._supports_air_temp = coordinator.supports_air_temp
         # Status topics
-        topic_prefix = coordinator.topic_prefix
+        topic_prefix = coordinator.prefix
         self._air_temp_topic = f"{topic_prefix}/{self._client_id}/airTemp"
         self._floor_temp_topic = f"{topic_prefix}/{self._client_id}/floorTemp"
         self._set_temp_topic = f"{topic_prefix}/{self._client_id}/setTemp"

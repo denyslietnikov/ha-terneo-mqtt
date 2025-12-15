@@ -42,6 +42,7 @@ async def async_setup_entry(
                 name="Heating",
                 device_class=BinarySensorDeviceClass.HEAT,
                 model=model,
+                topic_suffix="load",
             )
         )
     async_add_entities(entities)
@@ -58,9 +59,10 @@ class TerneoBinarySensor(TerneoMQTTEntity, BinarySensorEntity):
         name: str,
         device_class: BinarySensorDeviceClass | None,
         model: str = "AX",
+        topic_suffix: str = "load",
     ) -> None:
         """Initialize the binary sensor."""
-        super().__init__(hass, coordinator, sensor_type, name, model)
+        super().__init__(hass, coordinator, sensor_type, name, topic_suffix, model)
         self._attr_device_class = device_class
         self._attr_is_on = None
 
@@ -82,6 +84,7 @@ class TerneoBinarySensor(TerneoMQTTEntity, BinarySensorEntity):
         """Unsubscribe from MQTT topic when entity is removed."""
         if self._unsubscribe:
             self._unsubscribe()
+        await super().async_will_remove_from_hass()
 
     def parse_value(self, payload: str) -> int:
         """Parse MQTT payload for binary sensor."""
