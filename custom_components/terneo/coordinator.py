@@ -61,16 +61,17 @@ class TerneoCoordinator:
         if len(topic_parts) >= 3:
             key = topic_parts[-1]  # e.g., floorTemp
             try:
+                payload_str = (
+                    msg.payload.decode()
+                    if isinstance(msg.payload, bytes)
+                    else str(msg.payload)
+                )
                 if key in ["load", "powerOff", "mode", "bright"]:
-                    value = int(msg.payload)
+                    value = int(payload_str)
                 elif key in ["floorTemp", "airTemp", "protTemp", "setTemp"]:
-                    value = float(msg.payload)
+                    value = float(payload_str)
                 else:
-                    value = (
-                        msg.payload.decode()
-                        if isinstance(msg.payload, bytes)
-                        else str(msg.payload)
-                    )
+                    value = payload_str
                 self._data[key] = value
                 # Send update signal
                 async_dispatcher_send(

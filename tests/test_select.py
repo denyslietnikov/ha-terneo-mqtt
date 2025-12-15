@@ -142,3 +142,36 @@ async def test_select_coordinator_update_handling() -> None:
 
     assert entity.current_option == "temporary"
     entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_parse_value() -> None:
+    """Test parse_value with different payload types."""
+    hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client_id = "terneo_ax_1B0026"
+    coordinator.prefix = "terneo"
+    entity = TerneoSelect(
+        hass,
+        coordinator,
+        "mode",
+        "Mode",
+        ["schedule", "manual", "away", "temporary"],
+        "mode",
+        "AX",
+    )
+
+    # Test string payloads
+    assert entity.parse_value("0") == "schedule"
+    assert entity.parse_value("3") == "manual"
+    assert entity.parse_value("4") == "away"
+    assert entity.parse_value("5") == "temporary"
+    assert entity.parse_value("unknown") == "schedule"  # default
+
+    # Test bytes payloads
+    assert entity.parse_value(b"0") == "schedule"
+    assert entity.parse_value(b"3") == "manual"
+
+    # Test int payloads (converted to str)
+    assert entity.parse_value(3) == "manual"
+    assert entity.parse_value(0) == "schedule"
