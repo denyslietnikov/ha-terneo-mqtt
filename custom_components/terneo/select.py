@@ -97,7 +97,7 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
         # Map option to payload: schedule -> 0, manual -> 3, away -> 4, temporary -> 5
         payload_map = {"schedule": "0", "manual": "3", "away": "4", "temporary": "5"}
         payload = payload_map.get(option, "0")
-        await self.publish_command(self._topic_suffix, payload, retain=True)
+        await self.publish_command(self._topic_suffix, payload, retain=False)
         self._attr_current_option = option
         self.async_write_ha_state()
 

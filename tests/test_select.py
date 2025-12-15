@@ -54,7 +54,7 @@ async def test_select_async_select_option() -> None:
 
     # Test manual
     await entity.async_select_option("manual")
-    coordinator.publish_command.assert_called_once_with("mode", "3", retain=True)
+    coordinator.publish_command.assert_called_once_with("mode", "3", retain=False)
     assert entity.current_option == "manual"
     entity.async_write_ha_state.assert_called_once()
 
@@ -64,7 +64,7 @@ async def test_select_async_select_option() -> None:
 
     # Test schedule
     await entity.async_select_option("schedule")
-    coordinator.publish_command.assert_called_once_with("mode", "0", retain=True)
+    coordinator.publish_command.assert_called_once_with("mode", "0", retain=False)
     assert entity.current_option == "schedule"
     entity.async_write_ha_state.assert_called_once()
 
@@ -74,7 +74,7 @@ async def test_select_async_select_option() -> None:
 
     # Test away
     await entity.async_select_option("away")
-    coordinator.publish_command.assert_called_once_with("mode", "4", retain=True)
+    coordinator.publish_command.assert_called_once_with("mode", "4", retain=False)
     assert entity.current_option == "away"
     entity.async_write_ha_state.assert_called_once()
 
@@ -84,7 +84,7 @@ async def test_select_async_select_option() -> None:
 
     # Test temporary
     await entity.async_select_option("temporary")
-    coordinator.publish_command.assert_called_once_with("mode", "5", retain=True)
+    coordinator.publish_command.assert_called_once_with("mode", "5", retain=False)
     assert entity.current_option == "temporary"
     entity.async_write_ha_state.assert_called_once()
 

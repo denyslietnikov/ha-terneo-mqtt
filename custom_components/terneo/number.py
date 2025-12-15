@@ -119,6 +119,7 @@ class TerneoNumber(TerneoMQTTEntity, NumberEntity):
         """Parse MQTT payload for number."""
         return int(payload)
 
-    def update_value(self, value: int) -> None:
+    def update_value(self, value: int) -> bool:
         """Update number value."""
         self._attr_native_value = value
+        return True
