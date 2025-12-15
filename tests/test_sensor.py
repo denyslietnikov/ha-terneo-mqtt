@@ -164,9 +164,9 @@ async def test_sensor_async_setup_entry() -> None:
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
     assert (
-        len(entities) == 4
-    )  # 4 sensor entities per device (floor_temp, prot_temp, load, mode)
-    assert sum(1 for e in entities if isinstance(e, TerneoSensor)) == 3
+        len(entities) == 3
+    )  # 3 sensor entities per device (floor_temp, prot_temp, mode)
+    assert sum(1 for e in entities if isinstance(e, TerneoSensor)) == 2
     assert (
         sum(1 for e in entities if hasattr(e, "_update_mode")) == 1
     )  # TerneoModeSensor
@@ -256,8 +256,8 @@ async def test_sensor_async_setup_entry_with_energy() -> None:
     # Verify entities were added
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
-    assert len(entities) == 6  # 4 basic + 2 energy sensors per device
-    assert sum(1 for e in entities if isinstance(e, TerneoSensor)) == 3
+    assert len(entities) == 5  # 3 basic + 2 energy sensors per device
+    assert sum(1 for e in entities if isinstance(e, TerneoSensor)) == 2
     assert sum(1 for e in entities if isinstance(e, TerneoPowerSensor)) == 1
     assert sum(1 for e in entities if isinstance(e, TerneoEnergySensor)) == 1
     assert (

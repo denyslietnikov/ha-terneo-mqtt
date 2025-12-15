@@ -60,17 +60,6 @@ async def async_setup_entry(
                     topic_suffix="protTemp",
                     model=model,
                 ),
-                TerneoSensor(
-                    client_id=client_id,
-                    prefix=prefix,
-                    sensor_type="load",
-                    name="Load",
-                    device_class=None,
-                    state_class=SensorStateClass.MEASUREMENT,
-                    unit_of_measurement=None,
-                    topic_suffix="load",
-                    model=model,
-                ),
                 TerneoStateSensor(
                     client_id=client_id,
                     prefix=prefix,
