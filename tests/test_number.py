@@ -81,7 +81,7 @@ async def test_number_set_native_value() -> None:
 
     await entity.async_set_native_value(5.0)
 
-    coordinator.publish_command.assert_called_once_with("bright", "5")
+    coordinator.publish_command.assert_called_once_with("bright", "5", retain=False)
     assert entity.native_value == 5.0
     entity.async_write_ha_state.assert_called_once()
 
