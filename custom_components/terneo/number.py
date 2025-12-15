@@ -1,8 +1,8 @@
 """Number platform for TerneoMQ integration."""
+
 import logging
 
 from homeassistant.components.number import NumberEntity
-from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -10,6 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .base_entity import TerneoMQTTEntity
 from .const import DOMAIN
+from .coordinator import TerneoCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,11 +28,17 @@ async def async_setup_entry(
     model = config_entry.options.get("model", config_entry.data.get("model", "AX"))
 
     entities = []
+    coordinators = {}
     for device in devices:
         client_id = device["client_id"]
+        coordinator = TerneoCoordinator(
+            hass, client_id, prefix, True
+        )  # supports_air_temp not used for number
+        coordinators[client_id] = coordinator
+        await coordinator.async_setup()
         entities.append(
             TerneoNumber(
-                client_id, prefix, "brightness", "Brightness", 0, 9, 1, "bright", model
+                hass, coordinator, "brightness", "Brightness", 0, 9, 1, "bright", model
             )
         )
 
@@ -43,8 +50,8 @@ class TerneoNumber(TerneoMQTTEntity, NumberEntity):
 
     def __init__(
         self,
-        client_id: str,
-        prefix: str,
+        hass: HomeAssistant,
+        coordinator: TerneoCoordinator,
         sensor_type: str,
         name: str,
         min_value: float,
@@ -55,33 +62,36 @@ class TerneoNumber(TerneoMQTTEntity, NumberEntity):
     ) -> None:
         """Initialize the number entity."""
         super().__init__(
-            None,
-            client_id,
-            prefix,
+            hass,
+            coordinator,
             sensor_type,
             name,
             topic_suffix,
             model,
             track_availability=False,
-        )  # hass will be set later
-        self._attr_unique_id = f"{client_id}_{sensor_type}"
-        self._attr_name = f"Terneo {client_id} {name}"
+        )
+        self._topic_suffix = topic_suffix
+        self._topic = (
+            f"{coordinator.topic_prefix}/{coordinator.client_id}/{topic_suffix}"
+        )
+        self._command_topic = self._topic
+        self._attr_unique_id = f"{coordinator.client_id}_{sensor_type}"
+        self._attr_name = f"Terneo {coordinator.client_id} {name}"
         self._attr_native_min_value = min_value
         self._attr_native_max_value = max_value
         self._attr_native_step = step
-        self._attr_native_value = None
+        self._attr_native_value = coordinator.get_value(sensor_type)
 
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, client_id)},
+            identifiers={(DOMAIN, coordinator.client_id)},
             manufacturer="Terneo",
             model=self._model,
-            name=f"Terneo {client_id}",
+            name=f"Terneo {coordinator.client_id}",
         )
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to MQTT topic when entity is added."""
+        """Set up entity when added to hass."""
         await super().async_added_to_hass()
-        self.hass = self.hass  # Already set, but ensure
 
         # Restore previous state
         if (last_state := await self.async_get_last_state()) is not None:
@@ -100,20 +110,10 @@ class TerneoNumber(TerneoMQTTEntity, NumberEntity):
                         last_state.state,
                     )
 
-        # Subscribe to MQTT topic
-        self._unsubscribe = await mqtt.async_subscribe(
-            self.hass, self._topic, self._handle_message, qos=0
-        )
-
-    async def async_will_remove_from_hass(self) -> None:
-        """Unsubscribe from MQTT topic when entity is removed."""
-        if self._unsubscribe:
-            self._unsubscribe()
-
     async def async_set_native_value(self, value: float) -> None:
         """Set the value of the entity."""
         payload = str(int(value))
-        await self.publish_command(payload)
+        await self.publish_command(self._topic_suffix, payload)
         self._attr_native_value = value
         self.async_write_ha_state()
 

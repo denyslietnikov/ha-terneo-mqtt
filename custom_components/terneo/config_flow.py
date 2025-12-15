@@ -1,4 +1,5 @@
 """Config flow for TerneoMQ integration."""
+
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback

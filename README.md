@@ -10,14 +10,19 @@ This integration provides the following entities for each configured Terneo devi
 - **Sensor Entities**:
   - Floor temperature
   - Protection temperature
-  - Load (current consumption indicator)
   - Mode (Off/Idle/Heat based on device state)
   - Power (current power consumption in watts, requires rated power setting)
   - Energy (accumulated energy consumption in kWh, requires rated power setting)
+- **Binary Sensor Entity**:
+  - Heating (on/off indicator)
 - **Number Entity**:
   - Brightness (0-9 for display brightness)
 - **Select Entity**:
   - Mode (schedule/manual)
+
+## Testing
+
+This integration has been tested with Terneo AX model running firmware version 2.4 (Owl 3).
 
 ## Installation
 
@@ -60,6 +65,13 @@ The climate entity intelligently manages HVAC modes:
 
 When the device starts heating (load changes to 1), the mode automatically switches to HEAT to accurately reflect the current state, regardless of the configured mode.
 
-## License
+## MQTT Broker Configuration
 
-MIT
+This integration requires MQTT broker to be configured in Home Assistant. The integration uses the following MQTT settings:
+
+- **QoS**: 0 (At most once delivery)
+- **Retain**: Commands are sent without retain flag to prevent command replay on device reconnection
+- **Keep Alive**: Use default HA MQTT settings (60 seconds recommended)
+- **Clean Session**: Enabled
+
+Ensure your MQTT broker is properly configured and accessible from Home Assistant.
