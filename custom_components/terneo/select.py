@@ -94,16 +94,6 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
         """Set up entity when added to hass."""
         await super().async_added_to_hass()
 
-        # Restore previous state
-        if (last_state := await self.async_get_last_state()) is not None:
-            if last_state.state in self._options:
-                self._attr_current_option = last_state.state
-                _LOGGER.debug(
-                    "Restored %s state: %s",
-                    self._sensor_type,
-                    self._attr_current_option,
-                )
-
     async def async_select_option(self, option: str) -> None:
         """Set the option of the entity."""
         # Map option to payload: schedule -> 0, manual -> 3, away -> 4, temporary -> 5

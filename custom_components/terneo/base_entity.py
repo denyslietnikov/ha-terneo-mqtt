@@ -40,6 +40,8 @@ class TerneoMQTTEntity(RestoreEntity, ABC):
         self._topic_suffix = topic_suffix
         self._name = f"Terneo {coordinator.client_id} {name}"
         self._unique_id = f"{self._client_id}_{sensor_type}"
+        self._attr_unique_id = self._unique_id
+        self._attr_name = self._name
         self._last_update = None
         self._attr_available = True  # Always available for settings
         self._unavailable_timer = None
