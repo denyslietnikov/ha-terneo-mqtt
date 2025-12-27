@@ -202,39 +202,42 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
                 self._attr_hvac_action = climate.HVACAction.IDLE
             return
 
-        # Get current values from coordinator
-        power_off = self._power_off
-        load = self._load
-        floor_temp = self._floor_temp
-        air_temp = self._air_temp
-
         # hvac_mode is based on powerOff, load and temperatures
-        if power_off == 1:
-            self._attr_hvac_mode = climate.HVACMode.OFF
-            self._attr_hvac_action = climate.HVACAction.OFF
-        elif power_off == 0:
-            # Check if heating is needed based on temperatures
-            heating_needed = self._is_heating_needed()
-            if not heating_needed or load == 0:
-                self._attr_hvac_mode = climate.HVACMode.AUTO
-                self._attr_hvac_action = climate.HVACAction.IDLE
-            elif load == 1:
-                self._attr_hvac_mode = climate.HVACMode.HEAT
-                self._attr_hvac_action = climate.HVACAction.HEATING
-            else:
-                # Unknown load state, default to AUTO
-                self._attr_hvac_mode = climate.HVACMode.AUTO
-                self._attr_hvac_action = climate.HVACAction.IDLE
-        else:
-            # Unknown power_off state, default to OFF
-            self._attr_hvac_mode = climate.HVACMode.OFF
-            self._attr_hvac_action = climate.HVACAction.OFF
+        hvac_state = self._calculate_hvac_state()
+        if hvac_state is not None:
+            self._attr_hvac_mode, self._attr_hvac_action = hvac_state
 
         # Set current temperature
-        if air_temp is not None:
-            self._attr_current_temperature = air_temp
-        elif floor_temp is not None:
-            self._attr_current_temperature = floor_temp
+        if self._air_temp is not None:
+            self._attr_current_temperature = self._air_temp
+        elif self._floor_temp is not None:
+            self._attr_current_temperature = self._floor_temp
+
+    def _calculate_hvac_state(self) -> tuple[str, str] | None:
+        """Calculate hvac_mode and hvac_action, or None if state is unknown."""
+        power_off = self._power_off
+        load = self._load
+        hvac_state: tuple[str, str] | None = None
+
+        if power_off == 1:
+            hvac_state = (climate.HVACMode.OFF, climate.HVACAction.OFF)
+        elif power_off == 0:
+            heating_needed = self._is_heating_needed()
+            if load == 1 and heating_needed:
+                hvac_state = (climate.HVACMode.HEAT, climate.HVACAction.HEATING)
+            else:
+                hvac_state = (climate.HVACMode.AUTO, climate.HVACAction.IDLE)
+        elif power_off is None:
+            # Avoid forcing OFF on startup before powerOff arrives.
+            if load == 1:
+                hvac_state = (climate.HVACMode.HEAT, climate.HVACAction.HEATING)
+            elif load == 0:
+                hvac_state = (climate.HVACMode.AUTO, climate.HVACAction.IDLE)
+        else:
+            # Unknown power_off state, default to OFF
+            hvac_state = (climate.HVACMode.OFF, climate.HVACAction.OFF)
+
+        return hvac_state
 
     def _is_heating_needed(self) -> bool:
         """Check if heating is needed based on target and current temperatures."""

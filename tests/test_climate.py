@@ -230,6 +230,33 @@ async def test_climate_without_air_temp_uses_floor_temp() -> None:
 
 
 @pytest.mark.asyncio
+async def test_climate_does_not_force_off_when_power_off_unknown() -> None:
+    """Test that unknown powerOff doesn't force OFF on startup."""
+    hass = MagicMock()
+    hass.loop.create_task = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client_id = "terneo_ax_1B0026"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
+    coordinator.supports_air_temp = True
+    entity = TerneoMQTTClimate(hass, coordinator, "AX")
+
+    # Mock write_ha_state
+    entity.async_write_ha_state = MagicMock()
+
+    # Simulate restored state before MQTT values arrive
+    entity._attr_hvac_mode = "heat"
+    entity._attr_hvac_action = "heating"
+
+    # floorTemp arrives before powerOff/load
+    entity._handle_coordinator_update("floorTemp", 20.0)
+
+    # Should keep restored state rather than forcing OFF
+    assert entity._attr_hvac_mode == "heat"
+    assert entity._attr_hvac_action == "heating"
+
+
+@pytest.mark.asyncio
 @pytest.mark.asyncio
 async def test_climate_async_set_hvac_mode_heat_from_off() -> None:
     """Test setting HVAC mode to HEAT from OFF."""
