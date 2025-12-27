@@ -86,8 +86,8 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Set the option of the entity."""
-        # Map option to payload: schedule -> 0, manual -> 3, away -> 4, temporary -> 5
-        payload_map = {"schedule": "0", "manual": "3", "away": "4", "temporary": "5"}
+        # Map option to payload: schedule -> 0, manual -> 1, away -> 4, temporary -> 5
+        payload_map = {"schedule": "0", "manual": "1", "away": "4", "temporary": "5"}
         payload = payload_map.get(option, "0")
         await self.publish_command(self._topic_suffix, payload, retain=False)
         self._attr_current_option = option
@@ -95,7 +95,7 @@ class TerneoSelect(TerneoMQTTEntity, SelectEntity):
 
     def parse_value(self, payload: str) -> str:
         """Parse MQTT payload for select."""
-        value_map = {"0": "schedule", "3": "manual", "4": "away", "5": "temporary"}
+        value_map = {"0": "schedule", "1": "manual", "4": "away", "5": "temporary"}
         if isinstance(payload, bytes):
             payload = payload.decode(errors="ignore")
         payload_str = str(payload)
