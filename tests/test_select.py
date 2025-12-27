@@ -56,7 +56,7 @@ async def test_select_async_select_option() -> None:
 
     # Test manual
     await entity.async_select_option("manual")
-    coordinator.publish_command.assert_called_once_with("mode", "3", retain=False)
+    coordinator.publish_command.assert_called_once_with("mode", "1", retain=False)
     assert entity.current_option == "manual"
     entity.async_write_ha_state.assert_called_once()
 
@@ -123,7 +123,7 @@ async def test_select_coordinator_update_handling() -> None:
     entity.async_write_ha_state.reset_mock()
 
     # Test manual message
-    entity._handle_coordinator_update("mode", "3")
+    entity._handle_coordinator_update("mode", "1")
 
     assert entity.current_option == "manual"
     entity.async_write_ha_state.assert_called_once()
@@ -167,15 +167,15 @@ async def test_parse_value() -> None:
 
     # Test string payloads
     assert entity.parse_value("0") == "schedule"
-    assert entity.parse_value("3") == "manual"
+    assert entity.parse_value("1") == "manual"
     assert entity.parse_value("4") == "away"
     assert entity.parse_value("5") == "temporary"
     assert entity.parse_value("unknown") == "schedule"  # default
 
     # Test bytes payloads
     assert entity.parse_value(b"0") == "schedule"
-    assert entity.parse_value(b"3") == "manual"
+    assert entity.parse_value(b"1") == "manual"
 
     # Test int payloads (converted to str)
-    assert entity.parse_value(3) == "manual"
+    assert entity.parse_value(1) == "manual"
     assert entity.parse_value(0) == "schedule"

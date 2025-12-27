@@ -132,7 +132,7 @@ async def test_climate_mqtt_message_handling() -> None:
     entity.async_write_ha_state.reset_mock()
 
     # Test mode message (manual mode)
-    entity._handle_coordinator_update("mode", 3)
+    entity._handle_coordinator_update("mode", 1)
 
     assert entity._attr_hvac_mode == "heat"
     entity.async_write_ha_state.assert_called_once()
@@ -248,9 +248,9 @@ async def test_climate_async_set_hvac_mode_heat_from_off() -> None:
 
     await entity.async_set_hvac_mode("heat")
 
-    # Should publish mode=3 and powerOff=0 to turn on the device
+    # Should publish mode=1 and powerOff=0 to turn on the device
     assert coordinator.publish_command.call_count == 2
-    coordinator.publish_command.assert_any_call("mode", "3")
+    coordinator.publish_command.assert_any_call("mode", "1")
     coordinator.publish_command.assert_any_call("powerOff", "0")
     assert entity._attr_hvac_mode == "heat"
     entity.async_write_ha_state.assert_called_once()
@@ -324,7 +324,7 @@ async def test_climate_async_set_temperature_from_off() -> None:
 
     # Should publish mode=3, powerOff=0, and setTemp
     assert coordinator.publish_command.call_count == 3
-    coordinator.publish_command.assert_any_call("mode", "3")
+    coordinator.publish_command.assert_any_call("mode", "1")
     coordinator.publish_command.assert_any_call("powerOff", "0")
     coordinator.publish_command.assert_any_call("setTemp", "25.0")
     assert entity._attr_target_temperature == 25.0

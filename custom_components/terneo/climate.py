@@ -241,10 +241,10 @@ class TerneoMQTTClimate(ClimateEntity):
             # If currently OFF, switch to HEAT when setting temperature
             if current_hvac_mode == climate.HVACMode.OFF:
                 _LOGGER.debug("Switching to HEAT mode for temperature setting")
-                await self.coordinator.publish_command("mode", "3")
+                await self.coordinator.publish_command("mode", "1")
                 await self.coordinator.publish_command("powerOff", "0")
                 self._power_off = 0  # Update local state
-                self._mode = 3  # Update local state
+                self._mode = 1  # Update local state
                 self._load = 1  # Optimistically assume heating starts
                 self._attr_hvac_mode = climate.HVACMode.HEAT
             await self.coordinator.publish_command("setTemp", str(temperature))
@@ -268,8 +268,8 @@ class TerneoMQTTClimate(ClimateEntity):
         """Set new HVAC mode."""
         _LOGGER.debug("Setting HVAC mode to %s", hvac_mode)
         if hvac_mode == climate.HVACMode.HEAT:
-            # Set to manual mode (3) and turn on
-            await self.coordinator.publish_command("mode", "3")
+            # Set to manual mode (1) and turn on
+            await self.coordinator.publish_command("mode", "1")
             await self.coordinator.publish_command("powerOff", "0")
             # Set optimistic mode for 60 seconds
             self._optimistic_mode = climate.HVACMode.HEAT
