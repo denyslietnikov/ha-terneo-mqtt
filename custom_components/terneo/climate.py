@@ -13,6 +13,7 @@ from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN
 from .coordinator import TerneoCoordinator
@@ -37,7 +38,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class TerneoMQTTClimate(ClimateEntity):
+class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
     """Representation of a TerneoMQ climate device."""
 
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
@@ -105,6 +106,19 @@ class TerneoMQTTClimate(ClimateEntity):
     async def async_added_to_hass(self) -> None:
         """Listen to coordinator updates."""
         await super().async_added_to_hass()
+
+        # Restore previous state
+        old_state = await self.async_get_last_state()
+        if old_state is not None:
+            if old_state.attributes.get("temperature") is not None:
+                self._attr_target_temperature = old_state.attributes.get("temperature")
+            if old_state.state in [
+                climate.HVACMode.HEAT,
+                climate.HVACMode.AUTO,
+                climate.HVACMode.OFF,
+            ]:
+                self._attr_hvac_mode = old_state.state
+
         self._unsub_dispatcher = async_dispatcher_connect(
             self.hass,
             f"{DOMAIN}_{self._client_id}_update",
