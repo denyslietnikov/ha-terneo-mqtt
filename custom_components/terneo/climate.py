@@ -118,6 +118,38 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
                 climate.HVACMode.OFF,
             ]:
                 self._attr_hvac_mode = old_state.state
+            if old_state.attributes.get("power_off") is not None:
+                self._power_off = int(old_state.attributes.get("power_off"))
+            if old_state.attributes.get("load") is not None:
+                self._load = int(old_state.attributes.get("load"))
+
+        # Seed state from coordinator cache to avoid stale restore values on startup
+        cached_power_off = self.coordinator.get_value("powerOff")
+        cached_load = self.coordinator.get_value("load")
+        cached_set_temp = self.coordinator.get_value("setTemp")
+        cached_floor_temp = self.coordinator.get_value("floorTemp")
+        cached_air_temp = self.coordinator.get_value("airTemp")
+
+        if cached_power_off is not None:
+            self._power_off = int(cached_power_off)
+        if cached_load is not None:
+            self._load = int(cached_load)
+        if cached_set_temp is not None:
+            self._attr_target_temperature = float(cached_set_temp)
+        if cached_floor_temp is not None:
+            self._floor_temp = float(cached_floor_temp)
+        if cached_air_temp is not None:
+            self._air_temp = float(cached_air_temp)
+
+        if (
+            cached_power_off is not None
+            or cached_load is not None
+            or cached_set_temp is not None
+            or cached_floor_temp is not None
+            or cached_air_temp is not None
+        ):
+            self._update_hvac_mode_from_temps()
+            self.async_write_ha_state()
 
         # Seed state from coordinator cache to avoid stale restore values on startup
         cached_power_off = self.coordinator.get_value("powerOff")
@@ -260,6 +292,9 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
         load = self._load
         hvac_state: tuple[str, str] | None = None
 
+        if power_off is None:
+            return None
+
         if power_off == 1:
             hvac_state = (climate.HVACMode.OFF, climate.HVACAction.OFF)
         elif power_off == 0:
@@ -269,12 +304,6 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
             elif load == 1:
                 hvac_state = (climate.HVACMode.HEAT, climate.HVACAction.HEATING)
             else:
-                hvac_state = (climate.HVACMode.AUTO, climate.HVACAction.IDLE)
-        elif power_off is None:
-            # Avoid forcing OFF on startup before powerOff arrives.
-            if load == 1:
-                hvac_state = (climate.HVACMode.HEAT, climate.HVACAction.HEATING)
-            elif load == 0:
                 hvac_state = (climate.HVACMode.AUTO, climate.HVACAction.IDLE)
         else:
             # Unknown power_off state, default to OFF
@@ -376,6 +405,16 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
         """Delay resetting optimistic mode."""
         await asyncio.sleep(delay)
         self._reset_optimistic_mode()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra state attributes for restore."""
+        attrs: dict[str, Any] = {}
+        if self._power_off is not None:
+            attrs["power_off"] = self._power_off
+        if self._load is not None:
+            attrs["load"] = self._load
+        return attrs
 
     @property
     def device_info(self):

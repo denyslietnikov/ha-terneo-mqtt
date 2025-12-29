@@ -382,6 +382,40 @@ async def test_climate_seeds_state_from_coordinator_cache() -> None:
 
 
 @pytest.mark.asyncio
+async def test_climate_restores_power_off_and_load() -> None:
+    """Test restoring powerOff/load from last state attributes."""
+    hass = MagicMock()
+    hass.loop.create_task = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client_id = "terneo_ax_1B0026"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
+    coordinator.supports_air_temp = True
+    coordinator.get_value.return_value = None
+    entity = TerneoMQTTClimate(hass, coordinator, "AX")
+    entity.async_write_ha_state = MagicMock()
+    entity.async_get_last_state = AsyncMock(
+        return_value=MagicMock(
+            attributes={"temperature": 22.0, "power_off": 1, "load": 0},
+            state="auto",
+        )
+    )
+
+    climate_module = __import__(
+        "custom_components.terneo.climate", fromlist=["async_dispatcher_connect"]
+    )
+    climate_module.async_dispatcher_connect = MagicMock(return_value=MagicMock())
+
+    await entity.async_added_to_hass()
+
+    assert entity._power_off == 1
+    assert entity._load == 0
+    entity._update_hvac_mode_from_temps()
+    assert entity._attr_hvac_mode == "off"
+    assert entity._attr_hvac_action == "off"
+
+
+@pytest.mark.asyncio
 async def test_climate_async_set_temperature() -> None:
     """Test setting temperature."""
     hass = MagicMock()

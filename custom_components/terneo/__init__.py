@@ -20,6 +20,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     supports_air_temp = entry.options.get(
         "supports_air_temp", entry.data.get("supports_air_temp", True)
     )
+    reset_status_on_start = entry.options.get("reset_status_on_start", False)
     for device in entry.data.get("devices", []):
         client_id = device["client_id"]
         coordinator = TerneoCoordinator(
@@ -27,6 +28,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         hass.data[DOMAIN][entry.entry_id][client_id] = coordinator
         await coordinator.async_setup()
+        if reset_status_on_start:
+            await coordinator.publish_command("powerOff", "1")
+            await coordinator.publish_command("setTemp", "18")
 
     # Forward the setup to the platforms
     await hass.config_entries.async_forward_entry_setups(

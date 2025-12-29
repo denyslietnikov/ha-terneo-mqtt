@@ -134,6 +134,13 @@ class TerneoMQTTOptionsFlow(config_entries.OptionsFlow):
                         default=self._config_entry.options.get("rated_power_w", 0),
                         description="Rated power of heating element in watts (0 = disabled)",
                     ): vol.All(vol.Coerce(int), vol.Range(min=0, max=10000)),
+                    vol.Optional(
+                        "reset_status_on_start",
+                        default=self._config_entry.options.get(
+                            "reset_status_on_start", False
+                        ),
+                        description="Reset status on startup (powerOff=1, setTemp=18)",
+                    ): bool,
                 }
             ),
         )
