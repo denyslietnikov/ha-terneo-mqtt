@@ -317,6 +317,31 @@ async def test_climate_async_set_hvac_mode_auto_from_off() -> None:
 
 
 @pytest.mark.asyncio
+async def test_climate_power_off_clears_optimistic_mode() -> None:
+    """Test powerOff=1 clears optimistic mode immediately."""
+    hass = MagicMock()
+    hass.loop.create_task = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client_id = "terneo_ax_1B0026"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
+    coordinator.supports_air_temp = True
+    entity = TerneoMQTTClimate(hass, coordinator, "AX")
+    entity.async_write_ha_state = MagicMock()
+
+    entity._optimistic_mode = "auto"
+    entity._optimistic_task = MagicMock()
+
+    entity._handle_coordinator_update("powerOff", 1)
+
+    assert entity._optimistic_mode is None
+    assert entity._optimistic_task is None
+    assert entity._attr_hvac_mode == "off"
+    assert entity._attr_hvac_action == "off"
+    entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_climate_async_set_temperature() -> None:
     """Test setting temperature."""
     hass = MagicMock()
