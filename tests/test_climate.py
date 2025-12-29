@@ -103,6 +103,16 @@ async def test_climate_mqtt_message_handling() -> None:
     # Reset mock
     entity.async_write_ha_state.reset_mock()
 
+    # Drop target temp below floor temp -> AUTO even if load is 1
+    entity._handle_coordinator_update("setTemp", 18.0)
+
+    assert entity._attr_hvac_mode == "auto"
+    assert entity._attr_hvac_action == "idle"
+    entity.async_write_ha_state.assert_called_once()
+
+    # Reset mock
+    entity.async_write_ha_state.reset_mock()
+
     # Test powerOff message (off)
     entity._handle_coordinator_update("powerOff", 1)
 
@@ -116,7 +126,7 @@ async def test_climate_mqtt_message_handling() -> None:
     # Turn device back on before testing mode
     entity._handle_coordinator_update("powerOff", 0)
 
-    assert entity._attr_hvac_mode == "heat"  # Default when turned on
+    assert entity._attr_hvac_mode == "auto"  # setTemp=18.0 below floorTemp=19.0
     entity.async_write_ha_state.assert_called_once()
 
     # Reset mock
@@ -125,7 +135,7 @@ async def test_climate_mqtt_message_handling() -> None:
     # Test mode message (auto mode)
     entity._handle_coordinator_update("mode", 0)
 
-    assert entity._attr_hvac_mode == "heat"  # load=1 overrides mode
+    assert entity._attr_hvac_mode == "auto"
     entity.async_write_ha_state.assert_called_once()
 
     # Reset mock
@@ -134,7 +144,7 @@ async def test_climate_mqtt_message_handling() -> None:
     # Test mode message (manual mode)
     entity._handle_coordinator_update("mode", 1)
 
-    assert entity._attr_hvac_mode == "heat"
+    assert entity._attr_hvac_mode == "auto"
     entity.async_write_ha_state.assert_called_once()
 
     # Reset mock
@@ -257,7 +267,6 @@ async def test_climate_does_not_force_off_when_power_off_unknown() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.asyncio
 async def test_climate_async_set_hvac_mode_heat_from_off() -> None:
     """Test setting HVAC mode to HEAT from OFF."""
     hass = MagicMock()
@@ -304,6 +313,71 @@ async def test_climate_async_set_hvac_mode_auto_from_off() -> None:
     # Should publish powerOff=0 (leave mode as is)
     coordinator.publish_command.assert_called_once_with("powerOff", "0")
     assert entity._attr_hvac_mode == "auto"
+    entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_climate_power_off_clears_optimistic_mode() -> None:
+    """Test powerOff=1 clears optimistic mode immediately."""
+    hass = MagicMock()
+    hass.loop.create_task = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client_id = "terneo_ax_1B0026"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
+    coordinator.supports_air_temp = True
+    entity = TerneoMQTTClimate(hass, coordinator, "AX")
+    entity.async_write_ha_state = MagicMock()
+
+    entity._optimistic_mode = "auto"
+    entity._optimistic_task = MagicMock()
+
+    entity._handle_coordinator_update("powerOff", 1)
+
+    assert entity._optimistic_mode is None
+    assert entity._optimistic_task is None
+    assert entity._attr_hvac_mode == "off"
+    assert entity._attr_hvac_action == "off"
+    entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_climate_seeds_state_from_coordinator_cache() -> None:
+    """Test cached coordinator values override restored state on startup."""
+    hass = MagicMock()
+    hass.loop.create_task = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client_id = "terneo_ax_1B0026"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
+    coordinator.supports_air_temp = True
+    coordinator.get_value.side_effect = lambda key: {
+        "powerOff": 1,
+        "load": 0,
+        "setTemp": 18.0,
+        "floorTemp": 19.4,
+        "airTemp": 20.1,
+    }.get(key)
+    entity = TerneoMQTTClimate(hass, coordinator, "AX")
+    entity.async_write_ha_state = MagicMock()
+    entity.async_get_last_state = AsyncMock(
+        return_value=MagicMock(attributes={"temperature": 22.0}, state="auto")
+    )
+
+    climate_module = __import__(
+        "custom_components.terneo.climate", fromlist=["async_dispatcher_connect"]
+    )
+    climate_module.async_dispatcher_connect = MagicMock(return_value=MagicMock())
+
+    await entity.async_added_to_hass()
+
+    assert entity._power_off == 1
+    assert entity._load == 0
+    assert entity._attr_target_temperature == 18.0
+    assert entity._floor_temp == 19.4
+    assert entity._air_temp == 20.1
+    assert entity._attr_hvac_mode == "off"
+    assert entity._attr_hvac_action == "off"
     entity.async_write_ha_state.assert_called_once()
 
 
@@ -356,6 +430,34 @@ async def test_climate_async_set_temperature_from_off() -> None:
     coordinator.publish_command.assert_any_call("setTemp", "25.0")
     assert entity._attr_target_temperature == 25.0
     assert entity._attr_hvac_mode == "heat"
+    entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_climate_async_set_temperature_from_auto_optimistic_heat() -> None:
+    """Test optimistic HEAT when AUTO and target is above floor temp."""
+    hass = MagicMock()
+    hass.loop.create_task = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client_id = "terneo_ax_1B0026"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
+    coordinator.supports_air_temp = True
+    coordinator.publish_command = AsyncMock()
+    entity = TerneoMQTTClimate(hass, coordinator, "AX")
+    entity.async_write_ha_state = MagicMock()
+
+    entity._attr_hvac_mode = "auto"
+    entity._power_off = 0
+    entity._floor_temp = 20.0
+
+    await entity.async_set_temperature(temperature=25.0)
+
+    coordinator.publish_command.assert_called_once_with("setTemp", "25.0")
+    assert entity._attr_target_temperature == 25.0
+    assert entity._attr_hvac_mode == "heat"
+    assert entity._optimistic_mode == "heat"
+    assert entity._optimistic_task is not None
     entity.async_write_ha_state.assert_called_once()
 
 
@@ -426,7 +528,7 @@ async def test_climate_device_info() -> None:
 
 @pytest.mark.asyncio
 async def test_climate_hvac_mode_based_on_temperature_comparison() -> None:
-    """Test that hvac_mode changes based on load status regardless of temperatures."""
+    """Test hvac_mode based on powerOff, load, and temperature comparison."""
     hass = MagicMock()
     hass.loop.create_task = MagicMock()
     coordinator = MagicMock()
@@ -445,7 +547,7 @@ async def test_climate_hvac_mode_based_on_temperature_comparison() -> None:
     # Set floor temp to 21°C
     entity._handle_coordinator_update("floorTemp", 21.0)
 
-    # Set target temp to 23°C (above floor temp, but hvac_mode depends only on load)
+    # Set target temp to 23°C (above floor temp)
     entity._handle_coordinator_update("setTemp", 23.0)
 
     # Initially load=0 -> AUTO
@@ -462,10 +564,10 @@ async def test_climate_hvac_mode_based_on_temperature_comparison() -> None:
     # Now lower target temp to 20°C (below floor temp of 21°C)
     entity._handle_coordinator_update("setTemp", 20.0)
 
-    # Load turns OFF (target reached, no heating needed) -> AUTO
-    entity._handle_coordinator_update("load", 0)
+    # Load turns ON but heating not needed -> AUTO
+    entity._handle_coordinator_update("load", 1)
 
-    # Should be AUTO mode since load=0
+    # Should be AUTO mode since heating is not needed
     assert entity._attr_hvac_mode == "auto"
     assert entity._attr_hvac_action == "idle"
     entity.async_write_ha_state.assert_called()

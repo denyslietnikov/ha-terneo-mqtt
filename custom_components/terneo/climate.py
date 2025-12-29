@@ -119,6 +119,34 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
             ]:
                 self._attr_hvac_mode = old_state.state
 
+        # Seed state from coordinator cache to avoid stale restore values on startup
+        cached_power_off = self.coordinator.get_value("powerOff")
+        cached_load = self.coordinator.get_value("load")
+        cached_set_temp = self.coordinator.get_value("setTemp")
+        cached_floor_temp = self.coordinator.get_value("floorTemp")
+        cached_air_temp = self.coordinator.get_value("airTemp")
+
+        if cached_power_off is not None:
+            self._power_off = int(cached_power_off)
+        if cached_load is not None:
+            self._load = int(cached_load)
+        if cached_set_temp is not None:
+            self._attr_target_temperature = float(cached_set_temp)
+        if cached_floor_temp is not None:
+            self._floor_temp = float(cached_floor_temp)
+        if cached_air_temp is not None:
+            self._air_temp = float(cached_air_temp)
+
+        if (
+            cached_power_off is not None
+            or cached_load is not None
+            or cached_set_temp is not None
+            or cached_floor_temp is not None
+            or cached_air_temp is not None
+        ):
+            self._update_hvac_mode_from_temps()
+            self.async_write_ha_state()
+
         self._unsub_dispatcher = async_dispatcher_connect(
             self.hass,
             f"{DOMAIN}_{self._client_id}_update",
@@ -142,52 +170,65 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
     @callback
     def _handle_message_update(self, key: str, value: Any) -> None:
         """Handle message update from coordinator."""
+        handlers = {
+            "airTemp": self._handle_air_temp,
+            "floorTemp": self._handle_floor_temp,
+            "setTemp": self._handle_set_temp,
+            "load": self._handle_load,
+            "powerOff": self._handle_power_off,
+            "mode": self._handle_mode,
+        }
+        handler = handlers.get(key)
+        if handler is None:
+            return
         try:
-            updated = False
-            if key == "airTemp":
-                self._air_temp = float(value)
-                self._attr_current_temperature = float(value)
-                updated = True
-            elif key == "floorTemp":
-                self._floor_temp = float(value)
-                # Update hvac_mode based on setTemp vs floorTemp
-                self._update_hvac_mode_from_temps()
-                updated = True
-            elif key == "setTemp":
-                self._attr_target_temperature = float(value)
-                # Update hvac_mode based on setTemp vs floorTemp
-                self._update_hvac_mode_from_temps()
-                updated = True
-            elif key == "load":
-                self._load = int(value)
-                # Reset optimistic mode based on real state change
-                if self._optimistic_mode == climate.HVACMode.HEAT and self._load == 1:
-                    # Device started heating, HEAT is now real
-                    if self._optimistic_task:
-                        self._optimistic_task.cancel()
-                        self._optimistic_task = None
-                    self._optimistic_mode = None
-                elif self._optimistic_mode == climate.HVACMode.AUTO and self._load == 0:
-                    # Device stopped heating, AUTO is now real
-                    if self._optimistic_task:
-                        self._optimistic_task.cancel()
-                        self._optimistic_task = None
-                    self._optimistic_mode = None
-                self._update_hvac_mode_from_temps()
-                updated = True
-            elif key == "powerOff":
-                self._power_off = int(value)
-                self._update_hvac_mode_from_temps()
-                updated = True
-            elif key == "mode":
-                self._mode = int(value)
-                self._update_hvac_mode_from_temps()
-                updated = True
-
-            if updated:
-                self.async_write_ha_state()
+            handler(value)
+            self.async_write_ha_state()
         except ValueError:
             _LOGGER.error("Invalid value in update: %s", value)
+
+    def _clear_optimistic_mode(self) -> None:
+        """Clear optimistic mode and any pending reset."""
+        if self._optimistic_task:
+            self._optimistic_task.cancel()
+            self._optimistic_task = None
+        self._optimistic_mode = None
+
+    def _handle_air_temp(self, value: Any) -> None:
+        """Handle air temperature update."""
+        self._air_temp = float(value)
+        self._attr_current_temperature = self._air_temp
+
+    def _handle_floor_temp(self, value: Any) -> None:
+        """Handle floor temperature update."""
+        self._floor_temp = float(value)
+        self._update_hvac_mode_from_temps()
+
+    def _handle_set_temp(self, value: Any) -> None:
+        """Handle target temperature update."""
+        self._attr_target_temperature = float(value)
+        self._update_hvac_mode_from_temps()
+
+    def _handle_load(self, value: Any) -> None:
+        """Handle heating load update."""
+        self._load = int(value)
+        if (self._optimistic_mode == climate.HVACMode.HEAT and self._load == 1) or (
+            self._optimistic_mode == climate.HVACMode.AUTO and self._load == 0
+        ):
+            self._clear_optimistic_mode()
+        self._update_hvac_mode_from_temps()
+
+    def _handle_power_off(self, value: Any) -> None:
+        """Handle power-off update."""
+        self._power_off = int(value)
+        if self._power_off == 1 and self._optimistic_mode is not None:
+            self._clear_optimistic_mode()
+        self._update_hvac_mode_from_temps()
+
+    def _handle_mode(self, value: Any) -> None:
+        """Handle mode update."""
+        self._mode = int(value)
+        self._update_hvac_mode_from_temps()
 
     def _update_hvac_mode_from_temps(self) -> None:
         """Update hvac_mode and hvac_action based on powerOff, load and temperatures."""
@@ -223,7 +264,9 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
             hvac_state = (climate.HVACMode.OFF, climate.HVACAction.OFF)
         elif power_off == 0:
             heating_needed = self._is_heating_needed()
-            if load == 1 and heating_needed:
+            if not heating_needed:
+                hvac_state = (climate.HVACMode.AUTO, climate.HVACAction.IDLE)
+            elif load == 1:
                 hvac_state = (climate.HVACMode.HEAT, climate.HVACAction.HEATING)
             else:
                 hvac_state = (climate.HVACMode.AUTO, climate.HVACAction.IDLE)
@@ -271,6 +314,19 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
             # If temperature is below floor temp, optimistically set to AUTO
             if floor_temp is not None and temperature < floor_temp and power_off == 0:
                 self._optimistic_mode = climate.HVACMode.AUTO
+                if self._optimistic_task:
+                    self._optimistic_task.cancel()
+                self._optimistic_task = self.hass.loop.create_task(
+                    self._delay_reset_optimistic_mode(60)
+                )
+            # If currently AUTO and temperature is above floor temp, optimistically set to HEAT
+            elif (
+                floor_temp is not None
+                and temperature > floor_temp
+                and power_off == 0
+                and current_hvac_mode == climate.HVACMode.AUTO
+            ):
+                self._optimistic_mode = climate.HVACMode.HEAT
                 if self._optimistic_task:
                     self._optimistic_task.cancel()
                 self._optimistic_task = self.hass.loop.create_task(
