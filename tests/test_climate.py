@@ -342,6 +342,46 @@ async def test_climate_power_off_clears_optimistic_mode() -> None:
 
 
 @pytest.mark.asyncio
+async def test_climate_seeds_state_from_coordinator_cache() -> None:
+    """Test cached coordinator values override restored state on startup."""
+    hass = MagicMock()
+    hass.loop.create_task = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client_id = "terneo_ax_1B0026"
+    coordinator.telemetry_prefix = "terneo"
+    coordinator.command_prefix = "terneo"
+    coordinator.supports_air_temp = True
+    coordinator.get_value.side_effect = lambda key: {
+        "powerOff": 1,
+        "load": 0,
+        "setTemp": 18.0,
+        "floorTemp": 19.4,
+        "airTemp": 20.1,
+    }.get(key)
+    entity = TerneoMQTTClimate(hass, coordinator, "AX")
+    entity.async_write_ha_state = MagicMock()
+    entity.async_get_last_state = AsyncMock(
+        return_value=MagicMock(attributes={"temperature": 22.0}, state="auto")
+    )
+
+    climate_module = __import__(
+        "custom_components.terneo.climate", fromlist=["async_dispatcher_connect"]
+    )
+    climate_module.async_dispatcher_connect = MagicMock(return_value=MagicMock())
+
+    await entity.async_added_to_hass()
+
+    assert entity._power_off == 1
+    assert entity._load == 0
+    assert entity._attr_target_temperature == 18.0
+    assert entity._floor_temp == 19.4
+    assert entity._air_temp == 20.1
+    assert entity._attr_hvac_mode == "off"
+    assert entity._attr_hvac_action == "off"
+    entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_climate_async_set_temperature() -> None:
     """Test setting temperature."""
     hass = MagicMock()

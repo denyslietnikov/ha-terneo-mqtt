@@ -119,6 +119,34 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
             ]:
                 self._attr_hvac_mode = old_state.state
 
+        # Seed state from coordinator cache to avoid stale restore values on startup
+        cached_power_off = self.coordinator.get_value("powerOff")
+        cached_load = self.coordinator.get_value("load")
+        cached_set_temp = self.coordinator.get_value("setTemp")
+        cached_floor_temp = self.coordinator.get_value("floorTemp")
+        cached_air_temp = self.coordinator.get_value("airTemp")
+
+        if cached_power_off is not None:
+            self._power_off = int(cached_power_off)
+        if cached_load is not None:
+            self._load = int(cached_load)
+        if cached_set_temp is not None:
+            self._attr_target_temperature = float(cached_set_temp)
+        if cached_floor_temp is not None:
+            self._floor_temp = float(cached_floor_temp)
+        if cached_air_temp is not None:
+            self._air_temp = float(cached_air_temp)
+
+        if (
+            cached_power_off is not None
+            or cached_load is not None
+            or cached_set_temp is not None
+            or cached_floor_temp is not None
+            or cached_air_temp is not None
+        ):
+            self._update_hvac_mode_from_temps()
+            self.async_write_ha_state()
+
         self._unsub_dispatcher = async_dispatcher_connect(
             self.hass,
             f"{DOMAIN}_{self._client_id}_update",
