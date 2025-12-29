@@ -223,7 +223,9 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
             hvac_state = (climate.HVACMode.OFF, climate.HVACAction.OFF)
         elif power_off == 0:
             heating_needed = self._is_heating_needed()
-            if load == 1 and heating_needed:
+            if not heating_needed:
+                hvac_state = (climate.HVACMode.AUTO, climate.HVACAction.IDLE)
+            elif load == 1:
                 hvac_state = (climate.HVACMode.HEAT, climate.HVACAction.HEATING)
             else:
                 hvac_state = (climate.HVACMode.AUTO, climate.HVACAction.IDLE)
@@ -271,6 +273,19 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
             # If temperature is below floor temp, optimistically set to AUTO
             if floor_temp is not None and temperature < floor_temp and power_off == 0:
                 self._optimistic_mode = climate.HVACMode.AUTO
+                if self._optimistic_task:
+                    self._optimistic_task.cancel()
+                self._optimistic_task = self.hass.loop.create_task(
+                    self._delay_reset_optimistic_mode(60)
+                )
+            # If currently AUTO and temperature is above floor temp, optimistically set to HEAT
+            elif (
+                floor_temp is not None
+                and temperature > floor_temp
+                and power_off == 0
+                and current_hvac_mode == climate.HVACMode.AUTO
+            ):
+                self._optimistic_mode = climate.HVACMode.HEAT
                 if self._optimistic_task:
                     self._optimistic_task.cancel()
                 self._optimistic_task = self.hass.loop.create_task(
