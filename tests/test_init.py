@@ -28,6 +28,7 @@ async def test_async_setup_entry_resets_status_on_start() -> None:
     coordinator.client_id = "terneo_ax_1B0026"
     coordinator.async_setup = AsyncMock()
     coordinator.publish_command = AsyncMock()
+    coordinator.set_cached_value = MagicMock()
 
     with patch("custom_components.terneo.TerneoCoordinator", return_value=coordinator):
         await async_setup_entry(hass, config_entry)
@@ -35,5 +36,7 @@ async def test_async_setup_entry_resets_status_on_start() -> None:
     assert DOMAIN in hass.data
     assert config_entry.entry_id in hass.data[DOMAIN]
     coordinator.async_setup.assert_awaited_once()
+    coordinator.set_cached_value.assert_any_call("powerOff", 1)
+    coordinator.set_cached_value.assert_any_call("setTemp", 18.0)
     coordinator.publish_command.assert_any_await("powerOff", "1")
     coordinator.publish_command.assert_any_await("setTemp", "18")

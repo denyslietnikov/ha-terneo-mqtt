@@ -101,6 +101,10 @@ class TerneoCoordinator:
         """Get current value for a key."""
         return self._data.get(key)
 
+    def set_cached_value(self, key: str, value: Any) -> None:
+        """Cache a value locally without waiting for telemetry."""
+        self._data[key] = value
+
     async def publish_command(
         self, topic_suffix: str, payload: str, retain: bool = False
     ) -> None:
