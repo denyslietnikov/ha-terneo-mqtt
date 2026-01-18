@@ -373,6 +373,7 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
             # Set to manual mode (1) and turn on
             await self.coordinator.publish_command("mode", "1")
             await self.coordinator.publish_command("powerOff", "0")
+            self._power_off = 0
             # Set optimistic mode for 60 seconds
             self._optimistic_mode = climate.HVACMode.HEAT
             if self._optimistic_task:
@@ -383,6 +384,7 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
         elif hvac_mode == climate.HVACMode.AUTO:
             # Turn on (leave current mode as is)
             await self.coordinator.publish_command("powerOff", "0")
+            self._power_off = 0
             # Reset optimistic mode
             if self._optimistic_task:
                 self._optimistic_task.cancel()
@@ -390,6 +392,7 @@ class TerneoMQTTClimate(RestoreEntity, ClimateEntity):
             self._optimistic_mode = None
         elif hvac_mode == climate.HVACMode.OFF:
             await self.coordinator.publish_command("powerOff", "1")
+            self._power_off = 1
             # Reset optimistic mode
             if self._optimistic_task:
                 self._optimistic_task.cancel()
