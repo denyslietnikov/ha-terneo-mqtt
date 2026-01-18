@@ -29,6 +29,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN][entry.entry_id][client_id] = coordinator
         await coordinator.async_setup()
         if reset_status_on_start:
+            coordinator.set_cached_value("powerOff", 1)
+            coordinator.set_cached_value("setTemp", 18.0)
             await coordinator.publish_command("powerOff", "1")
             await coordinator.publish_command("setTemp", "18")
 

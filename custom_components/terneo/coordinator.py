@@ -51,6 +51,10 @@ class TerneoCoordinator:
             topics.append(
                 ("airTemp", f"{self.telemetry_prefix}/{self.client_id}/airTemp")
             )
+        if self.command_prefix != self.telemetry_prefix:
+            topics.append(
+                ("powerOff", f"{self.command_prefix}/{self.client_id}/powerOff")
+            )
 
         for key, topic in topics:
             unsub = await mqtt.async_subscribe(
@@ -96,6 +100,10 @@ class TerneoCoordinator:
     def get_value(self, key: str) -> Any:
         """Get current value for a key."""
         return self._data.get(key)
+
+    def set_cached_value(self, key: str, value: Any) -> None:
+        """Cache a value locally without waiting for telemetry."""
+        self._data[key] = value
 
     async def publish_command(
         self, topic_suffix: str, payload: str, retain: bool = False
