@@ -51,6 +51,10 @@ class TerneoCoordinator:
             topics.append(
                 ("airTemp", f"{self.telemetry_prefix}/{self.client_id}/airTemp")
             )
+        if self.command_prefix != self.telemetry_prefix:
+            topics.append(
+                ("powerOff", f"{self.command_prefix}/{self.client_id}/powerOff")
+            )
 
         for key, topic in topics:
             unsub = await mqtt.async_subscribe(
